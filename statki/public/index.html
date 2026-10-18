@@ -10,6 +10,8 @@
 </head>
 <body>
 <canvas id="sea" aria-hidden="true"></canvas>
+<canvas id="fireworks" aria-hidden="true" hidden></canvas>
+<canvas id="blast" aria-hidden="true" hidden></canvas>
 <header>
   <h1 data-i18n="h1">⚓ Statki</h1>
   <div class="head-right">
@@ -94,6 +96,7 @@
       </div>
     </div>
     <div id="overBox" class="card" hidden>
+      <button id="fireworksBtn" type="button" hidden data-i18n="fireworks.btn">🎆 Fajerwerki</button>
       <button id="rematchBtn" class="primary" type="button" data-i18n="rematch">Zagraj ponownie</button>
     </div>
   </section>
@@ -121,6 +124,8 @@
 <script src="i18n.js"></script>
 <script src="music.js"></script>
 <script src="sea.js"></script>
+<script src="fireworks.js"></script>
+<script src="blast.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

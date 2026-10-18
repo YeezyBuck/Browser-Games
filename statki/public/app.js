@@ -67,25 +67,56 @@ function noiseBuffer(sec, power) {
   for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, power);
   return buf;
 }
+// Trafienie: trzask uderzenia, huk z ogniem, mocny bas, odłamki i krótkie echo (ok. 1,6 s). Zatopienie (boomSunk) jest jeszcze większe.
+// Limiter: ogranicza szczyty głośności, żeby mocne wybuchy nie trzeszczały (przesterowanie), a mogły być głośne.
+function limiter() {
+  const c = ac.createDynamicsCompressor();
+  c.threshold.value = -8; c.knee.value = 4; c.ratio.value = 14; c.attack.value = 0.002; c.release.value = 0.18;
+  c.connect(ac.destination);
+  return c;
+}
+
 function boom() {
   if (muted || !audio()) return;
   const t = ac.currentTime;
-  const src = ac.createBufferSource(); src.buffer = noiseBuffer(1.3, 2);
-  const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
-  lp.frequency.setValueAtTime(1400, t); lp.frequency.exponentialRampToValueAtTime(70, t + 1.1);
-  const g = ac.createGain(); g.gain.setValueAtTime(0.66, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.25);
-  src.connect(lp); lp.connect(g); g.connect(ac.destination); src.start(t);
-  const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sine';
-  o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(35, t + 0.6);
-  og.gain.setValueAtTime(0.66, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
-  o.connect(og); og.connect(ac.destination); o.start(t); o.stop(t + 0.75);
+  const lim = limiter();
+  const out = ac.createGain(); out.gain.value = 0.5; out.connect(lim);
+  const echo = ac.createDelay(0.5); echo.delayTime.value = 0.13;                 // krótkie echo – wybuch "w przestrzeni"
+  const fb = ac.createGain(); fb.gain.value = 0.34;
+  const elp = ac.createBiquadFilter(); elp.type = 'lowpass'; elp.frequency.value = 1300;
+  out.connect(echo); echo.connect(elp); elp.connect(fb); fb.connect(echo); elp.connect(lim);
+  const noise = (dur, pw) => { const s = ac.createBufferSource(); s.buffer = noiseBuffer(dur, pw); return s; };
+  // 1) ostry trzask na starcie
+  const crack = noise(0.14, 3), hp = ac.createBiquadFilter(), cg = ac.createGain();
+  hp.type = 'highpass'; hp.frequency.value = 1500;
+  cg.gain.setValueAtTime(1.0, t); cg.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  crack.connect(hp); hp.connect(cg); cg.connect(out); crack.start(t);
+  // 2) korpus wybuchu: szum z opadającym filtrem
+  const body = noise(1.6, 2), lp = ac.createBiquadFilter(), bg = ac.createGain();
+  lp.type = 'lowpass'; lp.frequency.setValueAtTime(2600, t); lp.frequency.exponentialRampToValueAtTime(70, t + 1.35);
+  bg.gain.setValueAtTime(1.0, t); bg.gain.exponentialRampToValueAtTime(0.001, t + 1.55);
+  body.connect(lp); lp.connect(bg); bg.connect(out); body.start(t);
+  // 3) uderzenie basowe, które czuć w piersi
+  const thump = ac.createOscillator(), tg = ac.createGain(); thump.type = 'sine';
+  thump.frequency.setValueAtTime(175, t); thump.frequency.exponentialRampToValueAtTime(30, t + 0.7);
+  tg.gain.setValueAtTime(1.0, t); tg.gain.exponentialRampToValueAtTime(0.001, t + 0.85);
+  thump.connect(tg); tg.connect(out); thump.start(t); thump.stop(t + 0.9);
+  // 4) lecące odłamki: kilka krótkich trzasków w różnych wysokościach
+  for (let i = 0; i < 9; i++) {
+    const at = t + 0.12 + i * 0.075 + Math.random() * 0.05;
+    const c = noise(0.05, 2), bp = ac.createBiquadFilter(), g = ac.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = 900 + Math.random() * 3500; bp.Q.value = 2.5;
+    g.gain.setValueAtTime(0.0001, at); g.gain.linearRampToValueAtTime(0.28 * (1 - i / 11), at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
+    c.connect(bp); bp.connect(g); g.connect(out); c.start(at);
+  }
 }
+
 // Zatopienie statku: dużo mocniejszy i dłuższy wybuch niż zwykłe trafienie (podwójny huk, dudnienie,
 // skrzypienie tonącego kadłuba i bąbelki). Wszystko przez jeden głośnik z ograniczonym poziomem, żeby nie trzeszczało.
 function boomSunk() {
   if (muted || !audio()) return;
   const t = ac.currentTime;
-  const out = ac.createGain(); out.gain.value = 0.55; out.connect(ac.destination);
+  const out = ac.createGain(); out.gain.value = 0.85; out.connect(limiter());
   const burst = (t0, vol, dur) => {
     const src = ac.createBufferSource(); src.buffer = noiseBuffer(dur, 2);
     const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
@@ -179,6 +210,7 @@ function buildBoard(el, cellClass, handlers) {
     for (let x = 0; x < SIZE; x++) {
       const c = document.createElement('div');
       c.className = ['cell'].concat(cellClass(x, y)).join(' ');
+      c.dataset.x = x; c.dataset.y = y;
       if (handlers) {
         if (handlers.click) c.addEventListener('click', () => handlers.click(x, y));
         if (handlers.enter) c.addEventListener('mouseenter', () => handlers.enter(x, y));
@@ -363,6 +395,7 @@ function renderGame() {
   $('#leftOpp').textContent = s.left.opponent ?? TOTAL;
   const over = s.phase === 'over';
   $('#overBox').hidden = !over;
+  $('#fireworksBtn').hidden = !(over && s.winner === s.you);
   if (over) {
     const rb = $('#rematchBtn');
     rb.disabled = s.youWantRematch;
@@ -370,6 +403,7 @@ function renderGame() {
   }
 }
 
+$('#fireworksBtn').addEventListener('click', () => Fireworks.start());
 $('#rematchBtn').addEventListener('click', async () => {
   try { await api('/api/rematch'); } catch (e) { toast(errorText(e)); }
 });
@@ -453,6 +487,7 @@ async function loadInfo() {
 let closed = false;
 function showClosed() {
   closed = true;
+  Fireworks.stop();
   stopTransport();
   saveSession(null); state = null;
   $('#roomInfo').hidden = true; $('#chat').hidden = true; $('#quitBtn').hidden = true;
@@ -583,19 +618,37 @@ function onState(s) {
   const prevPhase = state && state.phase;
   const prevChat = state && state.chat && state.chat.length ? state.chat[state.chat.length - 1].id : (state ? 0 : undefined);
   state = s;
+  if (s.phase === 'over' && s.winner === s.you && prevPhase && prevPhase !== 'over') Fireworks.start();
+  else if (s.phase !== 'over') Fireworks.stop();
   if (s.phase === 'placing' && prevPhase && prevPhase !== 'placing' && prevPhase !== 'waiting') {
     place = { ships: [], horiz: true, sel: 4, hover: null };     // rewanż: zaczynamy od nowa
     lastSeq = null;
   }
+  let blast = null;
   const seq = s.last ? s.last.seq : 0;
   if (lastSeq === null) lastSeq = seq;                              // pierwszy stan po wejściu – bez dźwięku
   else if (seq > lastSeq) {
     lastSeq = seq;
     if (s.last.result === 'miss') plusk(); else if (s.last.result === 'sunk') boomSunk(); else boom();
+    if (s.last.result !== 'miss') blast = { mine: s.last.by !== s.you, x: s.last.x, y: s.last.y, sunk: s.last.result === 'sunk' };
     if (s.last.by === s.you && s.last.result === 'sunk') toast(t('toast.sunk'));
   }
   render();
   renderChat(prevChat);
+  if (blast) showBlast(blast);
+}
+
+// Wybuch po stronie, która oberwała: na mojej planszy, gdy przeciwnik mnie trafił; na planszy przeciwnika, gdy ja trafiłem.
+function showBlast(b) {
+  if ($('#game').hidden || !state) return;
+  const boardEl = b.mine ? $('#myBoard') : $('#targetBoard');
+  let cells = [[b.x, b.y]];
+  if (b.sunk) {                                                    // zatopienie: wybuchy na całym statku
+    const ships = (b.mine ? state.mine.sunk : state.target.sunk) || [];
+    const ship = ships.find(c => c.some(([x, y]) => x === b.x && y === b.y));
+    if (ship) cells = ship;
+  }
+  Blast.hit(boardEl, cells, b.sunk);
 }
 
 function gameGone() {                                               // serwer nie zna tej gry (np. restart)
@@ -617,7 +670,7 @@ function connect() {
   let got = false;
   source = new EventSource(`/api/events?${q}`);
   source.onmessage = e => { got = true; clearTimeout(sseWatchdog); const s = JSON.parse(e.data); ver = s.v; onState(s); };
-  source.onerror = () => { if (source && source.readyState === EventSource.CLOSED) gameGone(); };
+  source.onerror = () => { if (!unloading && source && source.readyState === EventSource.CLOSED) verifyGame(q); };
   sseWatchdog = setTimeout(() => { if (!got) { stopTransport(); startPolling(q); } }, 3000);
   refreshOnce(q);                                                      // pokaż ekran od razu, nie czekając na strumień
 }
@@ -628,6 +681,19 @@ async function refreshOnce(q) {
     if (r.status === 404) return gameGone();
     if (r.ok) { const s = await r.json(); if (!state || s.v >= ver) { ver = s.v; onState(s); } }
   } catch (e) {}
+}
+
+// Zerwany strumień nie oznacza, że gry nie ma (przeglądarka zrywa go też przy odświeżeniu i zamknięciu karty, a sieć bywa zawodna).
+// Pytamy serwer: tylko odpowiedź "nie ma takiej gry" kończy sesję, w pozostałych przypadkach przechodzimy na zapasowy transport.
+let unloading = false;
+addEventListener('pagehide', () => { unloading = true; });
+addEventListener('beforeunload', () => { unloading = true; });
+async function verifyGame(q) {
+  try {
+    const r = await fetch(`/api/state?${q}`, { cache: 'no-store' });
+    if (r.status === 404) return gameGone();
+  } catch (e) { /* brak sieci: spróbujemy zapasowego transportu */ }
+  if (session && !closed) { stopTransport(); startPolling(q); }
 }
 
 async function startPolling(q) {

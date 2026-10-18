@@ -2,7 +2,7 @@
 
 🇵🇱 [Wersja polska](README.pl.md)
 
-The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, a QR code for joining from a phone, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit), *splash* (miss) and a heavy multi-part explosion when a ship is sunk.
+The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, a QR code for joining from a phone, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit), *splash* (miss) and a heavy multi-part explosion when a ship is sunk. Hits show explosions on the ship, and the winner gets fireworks.
 
 No libraries to install: all you need is **Node.js**. The server acts as the referee and never sends your opponent the positions of your ships.
 
@@ -105,11 +105,11 @@ Fleet: **1 × four-cell ship, 2 × three-cell, 3 × two-cell, 4 × one-cell.** S
 
 ### Playing
 - You have **two boards**: *Your board* (your ships and your opponent's shots) and *Opponent's board* (where you fire).
-- On **your turn**, click a cell on the opponent's board. You hear **boom** for a hit, **splash** for a miss, and a much bigger, longer **explosion** (double blast, rumble, creaking hull, bubbles) when a ship is **sunk**.
+- On **your turn**, click a cell on the opponent's board. You hear **boom** for a hit, **splash** for a miss, and a much bigger, longer **explosion** (double blast, rumble, creaking hull, bubbles) when a ship is **sunk**. Every hit also shows an **explosion on the hit ship**, on the board that was hit (fireball, shockwave, sparks, debris, smoke and a shaking board); sinking a ship sets off a chain of explosions along its whole length and a huge finale.
 - **Each player fires one shot, then it is the opponent's turn** (also after a hit).
 - Markers: ✕ hit, dot miss. Cells around a sunk ship are marked as water automatically.
 - The "Opponent's ships: X/10" counter shows how many they have left.
-- **The first player to sink all of the opponent's ships wins.**
+- **The first player to sink all of the opponent's ships wins.** The winner's screen gets a **fireworks** show (the 🎆 button replays it).
 - After the game the opponent's board is revealed. **Play again**: both players click the button and the boards reset.
 
 ## 5. Playing over the internet (Cloudflare tunnel)
@@ -170,12 +170,13 @@ After installing, open a new terminal window. (The server also checks the typica
 | Music | 🎵 button mutes/unmutes; starts after the first click on the page (browser requirement) |
 | Sound effects (boom, splash, ship-sunk explosion, chat beep) | 🔊 button |
 | Rotating a ship | **Rotate** button or the **R** key |
+| Fireworks | shown automatically on the winner's screen; **🎆 Fireworks** button replays them |
 | Quitting the game | **⏻ Quit game** button at the top; it shuts down the server and the tunnel (visible only in the browser on the computer running the server) |
 | Copying the link | **Copy** button in the waiting panel or **Copy link** at the top |
 | Joining from a phone | scan the **QR code** shown in the waiting panel (internet link) |
 | Refreshing the page | does not kick you out: the session is remembered in the browser tab |
 
-The language and mute choices are remembered in the browser. The background animation is turned off if your system has "reduce motion" enabled.
+The language and mute choices are remembered in the browser. The background animation, explosions and fireworks are turned off if your system has "reduce motion" enabled.
 
 ## 8. Stopping the server
 
@@ -251,6 +252,8 @@ statki/
     ├── i18n.js          PL/EN translations
     ├── music.js         music generated with Web Audio
     ├── sea.js           animated background (sea, pirate ships)
+    ├── blast.js         explosions on the boards (hits and sinking)
+    ├── fireworks.js     fireworks on the winner's screen
     └── vendor/qrcode.js QR code generator (qrcode-generator, MIT license, bundled unchanged)
 ```
 

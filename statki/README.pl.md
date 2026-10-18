@@ -2,7 +2,7 @@
 
 🇬🇧 [English version](README.md)
 
-Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie), *plusk* (pudło) i potężny, wieloczęściowy wybuch przy zatopieniu statku.
+Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie), *plusk* (pudło) i potężny, wieloczęściowy wybuch przy zatopieniu statku. Trafienia pokazują wybuchy na statku, a zwycięzca dostaje fajerwerki.
 
 Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i nigdy nie wysyła przeciwnikowi pozycji Twoich statków.
 
@@ -104,11 +104,11 @@ Flota: **1 × czteromasztowiec, 2 × trójmasztowce, 3 × dwumasztowce, 4 × jed
 
 ### Rozgrywka
 - Masz **dwie plansze**: *Twoja plansza* (Twoje statki i strzały przeciwnika) oraz *Plansza przeciwnika* (tu strzelasz).
-- Gdy jest **Twoja kolej**, kliknij pole na planszy przeciwnika. Słychać **boom** przy trafieniu, **plusk** przy pudle oraz dużo mocniejszy i dłuższy **wybuch** (podwójny huk, dudnienie, skrzypiący kadłub, bąbelki) przy **zatopieniu** statku.
+- Gdy jest **Twoja kolej**, kliknij pole na planszy przeciwnika. Słychać **boom** przy trafieniu, **plusk** przy pudle oraz dużo mocniejszy i dłuższy **wybuch** (podwójny huk, dudnienie, skrzypiący kadłub, bąbelki) przy **zatopieniu** statku. Każde trafienie pokazuje też **wybuch na trafionym statku**, po stronie planszy, która oberwała (kula ognia, fala uderzeniowa, iskry, odłamki, dym i drżąca plansza); zatopienie to seria wybuchów wzdłuż całego statku i wielki finał.
 - **Każdy gracz oddaje jeden strzał, potem kolej przeciwnika** (także po trafieniu).
 - Znaczniki: ✕ trafienie, kropka pudło. Wokół zatopionego statku pola zaznaczają się same jako woda.
 - Licznik „Statki przeciwnika: X/10” pokazuje, ile mu zostało.
-- **Wygrywa ten, kto pierwszy zatopi wszystkie statki przeciwnika.**
+- **Wygrywa ten, kto pierwszy zatopi wszystkie statki przeciwnika.** Na ekranie zwycięzcy odpala się pokaz **fajerwerków** (przycisk 🎆 powtarza go).
 - Po końcu pokazuje się plansza przeciwnika. **Zagraj ponownie**: oboje klikają przycisk, a plansze się zerują.
 
 ## 5. Gra przez internet (tunel Cloudflare)
@@ -168,12 +168,13 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 | Muzyka | przycisk 🎵 wycisza/włącza; startuje po pierwszym kliknięciu na stronie (wymóg przeglądarek) |
 | Efekty dźwiękowe (boom, plusk, wybuch przy zatopieniu, sygnał czatu) | przycisk 🔊 |
 | Obrót statku | przycisk **Obróć** albo klawisz **R** |
+| Fajerwerki | pokazują się same na ekranie zwycięzcy; przycisk **🎆 Fajerwerki** powtarza pokaz |
 | Zamknięcie gry | przycisk **⏻ Zamknij grę** u góry: wyłącza serwer i tunel (widoczny tylko w przeglądarce na komputerze z serwerem) |
 | Kopiowanie linku | przycisk **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
 | Dołączenie z telefonu | zeskanuj **kod QR** z panelu oczekiwania (link przez internet) |
 | Odświeżenie strony | nie wyrzuca z gry: sesja jest zapamiętana w karcie przeglądarki |
 
-Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone animacje, jeśli system ma włączone „ogranicz ruch”.
+Gra pamięta wybór języka i wyciszenia w przeglądarce. Animacje tła, wybuchy i fajerwerki są wyłączone, jeśli system ma włączone „ogranicz ruch”.
 
 ## 8. Zatrzymanie serwera
 
@@ -249,6 +250,8 @@ statki/
     ├── i18n.js          tłumaczenia PL/EN
     ├── music.js         muzyka generowana w Web Audio
     ├── sea.js           animowane tło (morze, statki piratów)
+    ├── blast.js         wybuchy na planszach (trafienia i zatopienia)
+    ├── fireworks.js     fajerwerki na ekranie zwycięzcy
     └── vendor/qrcode.js generator kodów QR (qrcode-generator, licencja MIT, dołączony bez zmian)
 ```
 

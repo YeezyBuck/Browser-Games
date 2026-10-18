@@ -42,7 +42,7 @@ Na innych systemach: `cd WarShips` (albo `cd Dots`), potem `node server.js --tun
 Gry są przeznaczone do grania ze znajomymi: serwer działa na Twoim komputerze, a tunel Cloudflare „quick” jest tymczasowy i przeznaczony do testów. **Nie są przygotowane do stałego hostowania publicznego** (nie ma kont; każdy, kto zna kod pokoju, może dołączyć jako drugi gracz).
 
 ### Licencja
-[MIT](LICENSE), Copyright (c) 2026 YeezyBuck. Dołączona biblioteka kodów QR (`qrcode-generator`) ma własną licencję MIT: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Zgłoszenia błędów i propozycje są mile widziane w zakładce Issues.
+[MIT](LICENSE), Copyright (c) 2026 YeezyBuck. Dołączona biblioteka kodów QR (`qrcode-generator`) ma własną licencję MIT: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Zgłoszenia błędów i propozycje są mile widziane w zakładce Issues; zasady współtworzenia: [CONTRIBUTING.md](CONTRIBUTING.md), [Kodeks postępowania](CODE_OF_CONDUCT.md), zgłaszanie luk: [SECURITY.md](SECURITY.md).
 
 ## English
 
@@ -80,4 +80,4 @@ On other systems: `cd WarShips` (or `cd Dots`), then `node server.js --tunnel --
 The games are meant for playing with friends: the server runs on your computer, and the "quick" Cloudflare tunnel is temporary and intended for testing. **They are not hardened for permanent public hosting** (there are no accounts; anyone who knows a room code can join as the second player).
 
 ### License
-[MIT](LICENSE), Copyright (c) 2026 YeezyBuck. The bundled QR code library (`qrcode-generator`) has its own MIT license: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Bug reports and suggestions are welcome in the Issues tab.
+[MIT](LICENSE), Copyright (c) 2026 YeezyBuck. The bundled QR code library (`qrcode-generator`) has its own MIT license: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Bug reports and suggestions are welcome in the Issues tab; see [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md) for reporting vulnerabilities.

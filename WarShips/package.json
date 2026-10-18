@@ -1,5 +1,5 @@
 {
-  "name": "statki",
+  "name": "warships",
   "version": "1.0.0",
   "description": "Gra w statki dla dwóch osób przez przeglądarkę",
   "main": "server.js",

@@ -43,7 +43,7 @@ No accounts (Cloudflare, GitHub, etc.) are needed. The game works on Windows, ma
    ```
    You should see a version number, e.g. `v22.11.0`. If you get a "command not recognized" error, close the terminal and open it again, or restart the computer (the PATH has changed).
 3. **Get the game.**
-   - with git: `git clone https://github.com/YeezyBuck/WarShips.git`; the game is in the `WarShips/statki` folder,
+   - with git: `git clone https://github.com/YeezyBuck/WarShips.git`; the game is in the `WarShips` folder inside it (`WarShips/WarShips`),
    - or download the repository from GitHub as a ZIP and unpack it.
 4. *(Internet play only)* **install cloudflared**, described in [section 5](#5-playing-over-the-internet-cloudflare-tunnel).
 
@@ -61,7 +61,7 @@ A console window opens: **do not close it while playing**. The game page opens *
 
 ### Terminal (Windows, macOS, Linux)
 ```
-cd statki
+cd WarShips
 node server.js            # home network only
 node server.js --tunnel   # with a Cloudflare tunnel (internet play)
 node server.js --open     # additionally open the game in your browser
@@ -231,7 +231,7 @@ Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code
 ## 11. Tests
 
 ```
-cd statki
+cd WarShips
 node test.js        # or: npm test
 ```
 The test starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling, the QR library, the tunnel and cloudflared installation (using stand-in programs) and shutting down. At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
@@ -239,7 +239,7 @@ The test starts the server on a free port and plays a complete game with two "pl
 ## 12. Project structure (for developers)
 
 ```
-statki/
+WarShips/
 ├── server.js            HTTP server: game rules, rooms, limits, tunnel (no dependencies)
 ├── test.js              integration test (node test.js)
 ├── package.json         scripts: start, tunnel, test

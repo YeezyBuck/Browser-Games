@@ -43,7 +43,7 @@ Konta (Cloudflare, GitHub itp.) nie są potrzebne. Gra działa na Windows, macOS
    ```
    Powinien pojawić się numer wersji, np. `v22.11.0`. Jeśli jest błąd „nie rozpoznano polecenia”, zamknij terminal, otwórz go ponownie lub uruchom komputer ponownie (zmienił się PATH).
 3. **Pobierz grę.**
-   - przez git: `git clone https://github.com/YeezyBuck/WarShips.git`, a gra jest w folderze `WarShips/statki`,
+   - przez git: `git clone https://github.com/YeezyBuck/WarShips.git`, a gra jest w folderze `WarShips` wewnątrz niego (`WarShips/WarShips`),
    - albo pobierz repozytorium jako ZIP z GitHuba i rozpakuj.
 4. *(Tylko do gry przez internet)* **zainstaluj cloudflared**, opisane w [rozdziale 5](#5-gra-przez-internet-tunel-cloudflare).
 
@@ -61,7 +61,7 @@ Otworzy się okno konsoli: **nie zamykaj go podczas gry**. Strona gry otworzy si
 
 ### Terminal (Windows, macOS, Linux)
 ```
-cd statki
+cd WarShips
 node server.js            # tylko sieć domowa
 node server.js --tunnel   # z tunelem Cloudflare (gra przez internet)
 node server.js --open     # dodatkowo otwórz grę w przeglądarce
@@ -229,7 +229,7 @@ Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długoś
 ## 11. Testy
 
 ```
-cd statki
+cd WarShips
 node test.js        # albo: npm test
 ```
 Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling, bibliotekę QR, tunel i instalację cloudflared (z atrapami programów) oraz zamykanie gry. Na końcu: `Wszystkie testy przeszły (N)`.
@@ -237,7 +237,7 @@ Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „gracz
 ## 12. Budowa projektu (dla programistów)
 
 ```
-statki/
+WarShips/
 ├── server.js            serwer HTTP: reguły gry, pokoje, limity, tunel (bez zależności)
 ├── test.js              test integracyjny (node test.js)
 ├── package.json         skrypty: start, tunnel, test

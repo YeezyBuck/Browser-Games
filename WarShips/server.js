@@ -151,11 +151,11 @@ function broadcast(room) {
   room.version = (room.version || 0) + 1;
   room.players.forEach((p, pi) => {
     const data = 'data: ' + JSON.stringify(viewFor(room, pi)) + '\n\n';
-    for (const res of p.conns) res.write(data);
+    for (const res of p.conns) { try { res.write(data); } catch (e) { /* martwe połączenie nie może zablokować reszty */ } }
   });
   const waiting = room.waiters || [];
   room.waiters = [];
-  for (const w of waiting) { clearTimeout(w.timer); sendJson(w.res, 200, viewFor(room, w.pi)); }
+  for (const w of waiting) { clearTimeout(w.timer); try { sendJson(w.res, 200, viewFor(room, w.pi)); } catch (e) { /* j.w. */ } }
 }
 
 // ---------- logika gry ----------
@@ -595,7 +595,7 @@ function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   console.log('\nZamykam grę: wyłączam serwer i tunel…');
-  for (const room of rooms.values()) { room.closed = true; broadcast(room); }
+  for (const room of rooms.values()) { room.closed = true; try { broadcast(room); } catch (e) { /* jeden zepsuty pokój nie może przerwać zamykania reszty */ } }
   if (tunnel.child) { try { tunnel.child.kill(); } catch (e) {} }
   setTimeout(() => { try { server.close(); } catch (e) {} hooks.exit(0); }, 700);
 }

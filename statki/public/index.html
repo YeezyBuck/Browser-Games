@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Statki</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%E2%9A%93%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sea" aria-hidden="true"></canvas>
+<header>
+  <h1 data-i18n="h1">⚓ Statki</h1>
+  <div class="head-right">
+    <div id="roomInfo" hidden><span data-i18n="room">Pokój:</span> <strong id="roomCode"></strong> <button id="copyLink" type="button" data-i18n="copyLink">Kopiuj link</button></div>
+    <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Język">
+      <button type="button" data-lang="pl" aria-pressed="true">🇵🇱 Polski</button>
+      <button type="button" data-lang="en" aria-pressed="false">🇬🇧 English</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="banner" role="status" aria-live="polite"></div>
+
+  <section id="lobby" hidden>
+    <div class="card">
+      <h2 data-i18n="lobby.new">Nowa gra</h2>
+      <p data-i18n="lobby.newText">Utwórz grę i wyślij znajomemu kod lub link.</p>
+      <button id="createBtn" class="primary" type="button" data-i18n="lobby.create">Utwórz grę</button>
+    </div>
+    <div class="card">
+      <h2 data-i18n="lobby.join">Dołącz do gry</h2>
+      <p data-i18n="lobby.joinText">Wpisz kod od znajomego.</p>
+      <form id="joinForm">
+        <input id="joinCode" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="KOD" data-i18n-placeholder="lobby.code" data-i18n-aria="lobby.codeAria" aria-label="Kod gry">
+        <button class="primary" type="submit" data-i18n="lobby.joinBtn">Dołącz</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="waiting" hidden>
+    <div class="card">
+      <h2 data-i18n="wait.title">Czekam na przeciwnika…</h2>
+      <p><span data-i18n="wait.give">Kod gry:</span> <strong class="big" id="waitCode"></strong></p>
+      <p class="share-intro" data-i18n="share.intro">Przekaż przeciwnikowi jeden z adresów – zależy, gdzie jest:</p>
+      <div id="shareBox"></div>
+    </div>
+  </section>
+
+  <section id="placing" hidden>
+    <div class="placing-wrap">
+      <div>
+        <h2 data-i18n="place.title">Ustaw swoje statki</h2>
+        <div id="placeBoard" class="board"></div>
+      </div>
+      <div class="card side">
+        <h3 data-i18n="place.fleet">Twoja flota</h3>
+        <div id="fleetList"></div>
+        <div class="row">
+          <button id="rotateBtn" type="button" data-i18n="place.rotate">↻ Obróć (R)</button>
+          <button id="randomBtn" type="button" data-i18n="place.random">🎲 Losowo</button>
+          <button id="clearBtn" type="button" data-i18n="place.clear">Wyczyść</button>
+        </div>
+        <button id="readyBtn" class="primary" type="button" disabled data-i18n="place.ready">Gotowe</button>
+        <p class="hint" data-i18n="place.hint">Kliknij pole, aby postawić wybrany statek. Kliknij już postawiony statek, aby go zdjąć. Statki nie mogą się stykać, także rogami.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="counters">
+      <div><span data-i18n="game.mine">Twoje statki:</span> <strong id="leftMine">10</strong>/10</div>
+      <div><span data-i18n="game.opp">Statki przeciwnika:</span> <strong id="leftOpp">10</strong>/10</div>
+    </div>
+    <div class="boards">
+      <div>
+        <h2 data-i18n="game.myBoard">Twoja plansza</h2>
+        <div id="myBoard" class="board"></div>
+      </div>
+      <div>
+        <h2 data-i18n="game.targetBoard">Plansza przeciwnika</h2>
+        <div id="targetBoard" class="board"></div>
+      </div>
+    </div>
+    <div id="overBox" class="card" hidden>
+      <button id="rematchBtn" class="primary" type="button" data-i18n="rematch">Zagraj ponownie</button>
+    </div>
+  </section>
+</main>
+
+<div id="chat" class="chat" hidden>
+  <button id="chatToggle" type="button" aria-expanded="false" aria-controls="chatPanel" title="Czat" data-i18n-title="chat.title">
+    <span aria-hidden="true">💬</span><span id="chatBadge" class="badge" hidden>0</span>
+  </button>
+  <div id="chatPanel" class="chat-panel" role="dialog" aria-label="Czat" data-i18n-aria="chat.title" hidden>
+    <div class="chat-head"><strong data-i18n="chat.title">Czat</strong><button id="chatClose" type="button" aria-label="Zamknij" data-i18n-aria="chat.close">✕</button></div>
+    <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" maxlength="200" autocomplete="off" placeholder="Napisz do przeciwnika…" data-i18n-placeholder="chat.placeholder" aria-label="Wiadomość" data-i18n-aria="chat.message">
+      <button class="primary" type="submit" data-i18n="chat.send">Wyślij</button>
+    </form>
+  </div>
+</div>
+
+<div class="sound-btns">
+  <button id="musicBtn" type="button" aria-pressed="false" title="Wycisz muzykę">🎵</button>
+  <button id="mute" type="button" aria-pressed="false" title="Wycisz dźwięki">🔊</button>
+</div>
+<script src="i18n.js"></script>
+<script src="music.js"></script>
+<script src="sea.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

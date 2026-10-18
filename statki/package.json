@@ -1,0 +1,12 @@
+{
+  "name": "statki",
+  "version": "1.0.0",
+  "description": "Gra w statki dla dwóch osób przez przeglądarkę",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "tunnel": "node server.js --tunnel",
+    "test": "node test.js"
+  },
+  "private": true
+}

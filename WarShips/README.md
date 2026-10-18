@@ -6,6 +6,11 @@ The classic Battleships game for **two players**: on your home network or **over
 
 No libraries to install: all you need is **Node.js**. The server acts as the referee and never sends your opponent the positions of your ships.
 
+<p align="center">
+  <img src="../docs/screenshots/warships-battle.jpg" width="48%" alt="WarShips: an explosion on a hit ship">
+  <img src="../docs/screenshots/warships-sunk.jpg" width="48%" alt="WarShips: a ship is sunk">
+</p>
+
 ---
 
 ## Contents
@@ -43,7 +48,7 @@ No accounts (Cloudflare, GitHub, etc.) are needed. The game works on Windows, ma
    ```
    You should see a version number, e.g. `v22.11.0`. If you get a "command not recognized" error, close the terminal and open it again, or restart the computer (the PATH has changed).
 3. **Get the game.**
-   - with git: `git clone https://github.com/YeezyBuck/WarShips.git`; the game is in the `WarShips` folder inside it (`WarShips/WarShips`),
+   - with git: `git clone https://github.com/YeezyBuck/Browser-Games.git`; the game is in the `WarShips` folder (`Browser-Games/WarShips`),
    - or download the repository from GitHub as a ZIP and unpack it.
 4. *(Internet play only)* **install cloudflared**, described in [section 5](#5-playing-over-the-internet-cloudflare-tunnel).
 
@@ -273,3 +278,7 @@ WarShips/
 | `GET /api/info` | tunnel address, local-network addresses (host only), code length |
 
 Errors look like `{ "code": "…", "error": "…" }`; the client translates the code into the selected language.
+
+## License
+
+Released under the **MIT** license (see [LICENSE](../LICENSE)). The bundled QR code library has its own MIT license: see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

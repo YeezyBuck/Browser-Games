@@ -6,6 +6,11 @@ The classic Polish **Dots** game (surround and capture) for **two players**: on 
 
 No libraries to install: all you need is **Node.js**. The server is the referee and enforces all the rules. The game is built on top of [WarShips](../WarShips/README.md) and shares its infrastructure (rooms, Cloudflare tunnel, chat, security).
 
+<p align="center">
+  <img src="../docs/screenshots/dots-capture.jpg" width="48%" alt="Dots: capturing an enemy dot">
+  <img src="../docs/screenshots/dots-fireworks.jpg" width="48%" alt="Dots: the winner's fireworks">
+</p>
+
 ---
 
 ## Contents
@@ -48,7 +53,7 @@ No accounts (Cloudflare, GitHub, etc.) are needed. The game works on Windows, ma
 **Installation, step by step:**
 1. Install Node.js: download the LTS version from <https://nodejs.org> and install it with the default settings.
 2. Check in a terminal: `node --version` (you should see e.g. `v22.11.0`). On a "command not recognized" error, close and reopen the terminal or restart the computer.
-3. Get the repository: `git clone https://github.com/YeezyBuck/WarShips.git` (the game is in the `Dots` folder) or download the ZIP from GitHub and unpack it.
+3. Get the repository: `git clone https://github.com/YeezyBuck/Browser-Games.git` (the game is in the `Dots` folder: `Browser-Games/Dots`) or download the ZIP from GitHub and unpack it.
 
 The game needs no installation or build: there is no `npm install`.
 
@@ -206,3 +211,7 @@ Dots/
 | `GET /api/info` | tunnel address, local-network addresses, sizes, shutdown token (local browser only) |
 
 Errors look like `{ "code": "…", "error": "…" }`; the client translates the code into the selected language.
+
+## License
+
+Released under the **MIT** license (see [LICENSE](../LICENSE)). The bundled QR code library has its own MIT license: see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

@@ -6,6 +6,11 @@ Klasyczne polskie **kropki** (otaczanie) dla **dwóch graczy**: w sieci domowej 
 
 Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i pilnuje wszystkich reguł. Gra powstała na bazie [WarShips](../WarShips/README.pl.md) i ma tę samą infrastrukturę (pokoje, tunel Cloudflare, czat, zabezpieczenia).
 
+<p align="center">
+  <img src="../docs/screenshots/dots-capture.jpg" width="48%" alt="Dots: przejęcie kropki przeciwnika">
+  <img src="../docs/screenshots/dots-fireworks.jpg" width="48%" alt="Dots: fajerwerki zwycięzcy">
+</p>
+
 ---
 
 ## Spis treści
@@ -48,7 +53,7 @@ Konta (Cloudflare, GitHub itp.) nie są potrzebne. Gra działa na Windows, macOS
 **Instalacja krok po kroku:**
 1. Zainstaluj Node.js: pobierz wersję LTS z <https://nodejs.org> i zainstaluj z ustawieniami domyślnymi.
 2. Sprawdź w terminalu: `node --version` (powinien pojawić się np. `v22.11.0`). Jeśli jest błąd „nie rozpoznano polecenia”, zamknij i otwórz terminal ponownie albo uruchom komputer ponownie.
-3. Pobierz repozytorium: `git clone https://github.com/YeezyBuck/WarShips.git` (gra jest w folderze `Dots`) albo pobierz ZIP z GitHuba i rozpakuj.
+3. Pobierz repozytorium: `git clone https://github.com/YeezyBuck/Browser-Games.git` (gra jest w folderze `Dots`: `Browser-Games/Dots`) albo pobierz ZIP z GitHuba i rozpakuj.
 
 Samej gry nie trzeba instalować ani budować: nie ma `npm install`.
 
@@ -206,3 +211,7 @@ Dots/
 | `GET /api/info` | adres tunelu, adresy sieci lokalnej, rozmiary, token zamykania (tylko dla lokalnej przeglądarki) |
 
 Błędy mają postać `{ "code": "…", "error": "…" }`; klient tłumaczy kod na wybrany język.
+
+## Licencja
+
+Projekt jest udostępniony na licencji **MIT** (zobacz [LICENSE](../LICENSE)). Dołączona biblioteka kodów QR ma własną licencję MIT: zobacz [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).

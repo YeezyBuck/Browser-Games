@@ -43,7 +43,7 @@ Konta (Cloudflare, GitHub itp.) nie są potrzebne. Gra działa na Windows, macOS
    ```
    Powinien pojawić się numer wersji, np. `v22.11.0`. Jeśli jest błąd „nie rozpoznano polecenia”, zamknij terminal, otwórz go ponownie lub uruchom komputer ponownie (zmienił się PATH).
 3. **Pobierz grę.**
-   - przez git: `git clone https://github.com/YeezyBuck/Development.git`, a gra jest w folderze `Development/statki`,
+   - przez git: `git clone https://github.com/YeezyBuck/WarShips.git`, a gra jest w folderze `WarShips/statki`,
    - albo pobierz repozytorium jako ZIP z GitHuba i rozpakuj.
 4. *(Tylko do gry przez internet)* **zainstaluj cloudflared**, opisane w [rozdziale 5](#5-gra-przez-internet-tunel-cloudflare).
 

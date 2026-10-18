@@ -43,7 +43,7 @@ No accounts (Cloudflare, GitHub, etc.) are needed. The game works on Windows, ma
    ```
    You should see a version number, e.g. `v22.11.0`. If you get a "command not recognized" error, close the terminal and open it again, or restart the computer (the PATH has changed).
 3. **Get the game.**
-   - with git: `git clone https://github.com/YeezyBuck/Development.git`; the game is in the `Development/statki` folder,
+   - with git: `git clone https://github.com/YeezyBuck/WarShips.git`; the game is in the `WarShips/statki` folder,
    - or download the repository from GitHub as a ZIP and unpack it.
 4. *(Internet play only)* **install cloudflared**, described in [section 5](#5-playing-over-the-internet-cloudflare-tunnel).
 

@@ -8,5 +8,16 @@
     "local": "node server.js --open",
     "test": "node test.js"
   },
-  "private": true
+  "private": true,
+  "license": "MIT",
+  "author": "YeezyBuck",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YeezyBuck/Browser-Games.git",
+    "directory": "WarShips"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/YeezyBuck/Browser-Games/tree/main/WarShips"
 }

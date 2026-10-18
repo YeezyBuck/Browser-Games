@@ -1,0 +1,5 @@
+# Teksty zawsze z końcami linii LF w repozytorium; pliki .bat muszą mieć CRLF, żeby działały w Windows.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+*.jpg binary

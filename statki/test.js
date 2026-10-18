@@ -1,7 +1,7 @@
 'use strict';
 // Test integracyjny: uruchamia serwer na wolnym porcie i gra dwoma "graczami" przez HTTP.
 const assert = require('assert');
-const { server, hooks, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp } = require('./server');
+const { server, hooks, waitForTunnel, checkPortFree, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp } = require('./server');
 
 let base;
 const post = async (p, body) => { const r = await fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, body: await r.json() }; };
@@ -278,6 +278,20 @@ async function main() {
   assert.strictEqual(remote.local, false); assert.deepStrictEqual(remote.lan, []); assert.strictEqual(remote.publicUrl, info1.publicUrl); ok('klient z internetu nie dostaje adresów sieci domowej');
   assert.strictEqual(clientIp({ socket: { remoteAddress: '::ffff:127.0.0.1' }, headers: { 'cf-connecting-ip': '198.51.100.5' } }), '198.51.100.5');
   assert.strictEqual(clientIp({ socket: { remoteAddress: '::ffff:192.168.1.50' }, headers: { 'cf-connecting-ip': '1.2.3.4' } }), '192.168.1.50'); ok('nagłówkom proxy ufamy tylko z localhost (brak podszywania się w LAN)');
+
+  // ---------- kolejność startu: wolny port, czekanie na tunel ----------
+  const probe = require('net').createServer(); await new Promise(r => probe.listen(0, '0.0.0.0', r));
+  const busyPort = probe.address().port;
+  assert.strictEqual(await checkPortFree(busyPort), false);
+  await new Promise(r => probe.close(r));
+  assert.strictEqual(await checkPortFree(busyPort), true); ok('start: zajęty port wykrywany przed uruchomieniem tunelu, wolny przechodzi');
+  tunnel.status = 'starting'; setTimeout(() => { tunnel.status = 'on'; }, 300);
+  assert.strictEqual(await waitForTunnel(3000), true); ok('start: czekanie na tunel kończy się sukcesem, gdy tunel poda adres');
+  tunnel.status = 'starting'; setTimeout(() => { tunnel.status = 'error'; }, 300);
+  const t1 = Date.now(); assert.strictEqual(await waitForTunnel(3000), false); assert.ok(Date.now() - t1 < 1500); ok('start: awaria tunelu przerywa czekanie od razu (bez czekania na limit)');
+  tunnel.status = 'starting';
+  const t2 = Date.now(); assert.strictEqual(await waitForTunnel(500), false); assert.ok(Date.now() - t2 >= 450 && Date.now() - t2 < 1500); ok('start: limit czasu czekania na tunel działa');
+  tunnel.status = 'on';
 
   // ---------- zamykanie gry (przycisk "Zamknij grę") ----------
   const infoLocal = await (await fetch(base + '/api/info')).json();

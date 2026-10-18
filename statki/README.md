@@ -133,7 +133,7 @@ After installing, open a new terminal window. (The server also checks the typica
 
 ### Starting it
 1. Start **`uruchom-tunel.bat`** (Windows) or `npm run tunnel`.
-2. Wait a few seconds. A box appears in the console:
+2. The start goes in three steps, shown in the console: **[1/3]** it checks whether cloudflared is installed (and offers to install it, see above), **[2/3]** it starts the tunnel and waits for its address, **[3/3]** only then it starts the game and opens the browser. So the page already knows the internet address when it opens. If the tunnel fails to start, the game still starts (home network only). It takes a few seconds; a box appears in the console:
    ```
    ==================================================================
      GRA PRZEZ INTERNET – przekaż przeciwnikowi ten adres:

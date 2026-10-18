@@ -132,7 +132,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 
 ### Uruchomienie
 1. Uruchom **`uruchom-tunel.bat`** (Windows) albo `npm run tunnel`.
-2. Poczekaj kilka sekund. W konsoli pojawi się ramka:
+2. Start przebiega w trzech krokach widocznych w konsoli: **[1/3]** sprawdzenie, czy jest cloudflared (i propozycja instalacji, patrz wyżej), **[2/3]** uruchomienie tunelu i czekanie na jego adres, **[3/3]** dopiero wtedy start gry i otwarcie przeglądarki. Dzięki temu strona od razu zna adres do gry przez internet. Jeśli tunel nie wystartuje, gra i tak się uruchomi (tylko sieć domowa). Zajmuje to kilka sekund; w konsoli pojawi się ramka:
    ```
    ==================================================================
      GRA PRZEZ INTERNET – przekaż przeciwnikowi ten adres:

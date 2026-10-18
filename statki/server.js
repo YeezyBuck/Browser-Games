@@ -11,6 +11,7 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
+const net = require('net');
 
 const PORT = Number(process.env.PORT) || 3000;
 const SIZE = 10;
@@ -334,7 +335,7 @@ async function ensureCloudflared(deps = {}) {
   const find = deps.find || findCloudflared, pick = deps.pickInstaller || pickInstaller;
   const ask = deps.ask || askYesNo, install = deps.install || runInstaller;
   const found = find();
-  if (found) return found;
+  if (found) { console.log('cloudflared jest zainstalowany.'); return found; }
   console.log('Nie znaleziono programu cloudflared (potrzebnego do gry przez internet).');
   const inst = pick();
   if (!inst) { console.log(`Zainstaluj go ręcznie: ${CLOUDFLARED_DOCS}`); return null; }
@@ -610,20 +611,61 @@ function openBrowser(url) {
   } catch (e) { console.log('Nie udało się otworzyć przeglądarki – otwórz ręcznie: ' + url); }
 }
 
-if (require.main === module) {
-  server.headersTimeout = 15000;
-  server.requestTimeout = 30000;
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`Statki działają: http://localhost:${PORT}`);
-    lanUrls().forEach(u => console.log(`  w sieci lokalnej: ${u}`));
-    if (process.argv.includes('--open') || process.env.OPEN_BROWSER === '1') openBrowser(`http://localhost:${PORT}`);
-    if (process.argv.includes('--tunnel') || process.env.TUNNEL === '1') {
-      console.log('Uruchamiam tunel Cloudflare (gra przez internet)…');
-      startTunnel(PORT).catch(e => console.log('Błąd uruchamiania tunelu:', e.message));
-    } else {
-      console.log('Gra przez internet: uruchom serwer z tunelem (npm run tunnel lub uruchom-tunel.bat).');
-    }
+// Czeka, aż tunel poda adres (albo zakończy się porażką, albo minie limit czasu). Zwraca true, gdy tunel działa.
+function waitForTunnel(ms) {
+  return new Promise(resolve => {
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      const failed = tunnel.status === 'error' || tunnel.status === 'not_installed';
+      if (tunnel.status === 'on' || failed || Date.now() - t0 > ms) { clearInterval(iv); resolve(tunnel.status === 'on'); }
+    }, 200);
   });
 }
 
-module.exports = { server, hooks, findCloudflared, pickInstaller, cleanChat, parseFleet, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };
+// Czy port jest wolny? (sprawdzamy przed uruchomieniem tunelu, żeby nie zostawiać go bez gry)
+function checkPortFree(port) {
+  return new Promise(resolve => {
+    const probe = net.createServer();
+    probe.once('error', () => resolve(false));
+    probe.once('listening', () => probe.close(() => resolve(true)));
+    probe.listen(port, '0.0.0.0');
+  });
+}
+
+// Kolejność startu z tunelem: 1) sprawdzenie cloudflared (ewentualna instalacja), 2) tunel i jego adres, 3) gra i przeglądarka.
+async function main() {
+  const wantTunnel = process.argv.includes('--tunnel') || process.env.TUNNEL === '1';
+  const open = process.argv.includes('--open') || process.env.OPEN_BROWSER === '1';
+  if (!(await checkPortFree(PORT))) {
+    console.log(`Port ${PORT} jest zajęty (czy gra już działa?). Zamknij ją albo użyj innego portu, np. PORT=${PORT + 1} node server.js`);
+    process.exit(1);
+  }
+  const steps = wantTunnel ? 3 : 1;
+  if (wantTunnel) {
+    console.log(`[1/${steps}] Sprawdzam, czy jest cloudflared (potrzebny do gry przez internet)…`);
+    await startTunnel(PORT);                                    // sprawdzenie, ewentualna instalacja i start tunelu
+    console.log(`[2/${steps}] Uruchamiam tunel i czekam na jego adres…`);
+    if (!(await waitForTunnel(45000))) console.log('Tunel nie wystartował – uruchamiam samą grę (działa w sieci domowej).');
+  }
+  console.log(`[${steps}/${steps}] Uruchamiam grę…`);
+  server.headersTimeout = 15000;
+  server.requestTimeout = 30000;
+  server.once('error', e => {
+    console.log('Nie udało się uruchomić serwera gry:', e.message);
+    if (tunnel.child) { try { tunnel.child.kill(); } catch (x) {} }
+    process.exit(1);
+  });
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`\nStatki działają: http://localhost:${PORT}`);
+    lanUrls().forEach(u => console.log(`  w sieci lokalnej: ${u}`));
+    if (tunnel.url) console.log(`  przez internet:   ${tunnel.url}   (link z kodem pokoju zobaczysz w grze)`);
+    else if (!wantTunnel) console.log('Gra przez internet: uruchom serwer z tunelem (npm run tunnel lub uruchom-tunel.bat).');
+    if (open) openBrowser(`http://localhost:${PORT}`);
+  });
+}
+
+if (require.main === module) {
+  main().catch(e => { console.log('Błąd uruchamiania:', e.message); process.exit(1); });
+}
+
+module.exports = { server, hooks, waitForTunnel, checkPortFree, findCloudflared, pickInstaller, cleanChat, parseFleet, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };

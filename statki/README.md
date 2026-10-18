@@ -2,7 +2,7 @@
 
 🇵🇱 [Wersja polska](README.pl.md)
 
-The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit) and *splash* (miss).
+The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, a QR code for joining from a phone, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit) and *splash* (miss).
 
 No libraries to install: all you need is **Node.js**. The server acts as the referee and never sends your opponent the positions of your ships.
 
@@ -86,7 +86,7 @@ You need two people (or two browser tabs to try it out alone).
 1. Open the address from the console in your browser (`http://localhost:3000`).
 2. *(Optional)* choose the language with the **Polski / English** buttons at the top.
 3. Click **Create game**. A **6-letter game code** appears, together with ready-made links to give your opponent:
-   - 🌐 **Opponent over the internet**, shown when the tunnel is running,
+   - 🌐 **Opponent over the internet**, shown when the tunnel is running, together with a **QR code**: the opponent can scan it with a phone and join straight away,
    - 🏠 **Opponent on the same Wi-Fi/LAN**.
 4. Send your friend the right link (use the **Copy** button) and wait for them to join.
 
@@ -138,6 +138,7 @@ After installing, open a new terminal window. (The server also checks the typica
 
 ### Good to know
 - **Which address for whom?** 🌐 the tunnel address for people outside your network, 🏠 the local-network address for people at home.
+- **QR code:** next to the 🌐 link there is a QR code with the same link (room code included). Your friend points the phone camera at it and opens the game, no typing needed. It appears only when the tunnel is running.
 - The tunnel address is **temporary**; it changes every time the tunnel starts. The computer running the server must stay **on** for the whole game.
 - The free tunnel does not pass live streams (SSE). After about 3 s the game **switches to a fallback transport** (long-polling) by itself. Players do not notice.
 - Anyone who knows the link **and** the code can join as the second player, so do not post it publicly.
@@ -161,6 +162,7 @@ After installing, open a new terminal window. (The server also checks the typica
 | Sound effects (boom, splash, chat beep) | 🔊 button |
 | Rotating a ship | **Rotate** button or the **R** key |
 | Copying the link | **Copy** button in the waiting panel or **Copy link** at the top |
+| Joining from a phone | scan the **QR code** shown in the waiting panel (internet link) |
 | Refreshing the page | does not kick you out: the session is remembered in the browser tab |
 
 The language and mute choices are remembered in the browser. The background animation is turned off if your system has "reduce motion" enabled.
@@ -213,7 +215,7 @@ Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code
 cd statki
 node test.js        # or: npm test
 ```
-The test starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling and the tunnel (using a stand-in program). At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
+The test starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling, the QR library and the tunnel (using a stand-in program). At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
 
 ## 12. Project structure (for developers)
 
@@ -230,7 +232,8 @@ statki/
     ├── app.js           client logic: screens, boards, chat, transport
     ├── i18n.js          PL/EN translations
     ├── music.js         music generated with Web Audio
-    └── sea.js           animated background (sea, pirate ships)
+    ├── sea.js           animated background (sea, pirate ships)
+    └── vendor/qrcode.js QR code generator (qrcode-generator, MIT license, bundled unchanged)
 ```
 
 **How it works.** The server keeps room state in memory and is the single source of truth. The client sends commands as plain POST requests and receives state changes through an **SSE** stream. If the stream does not arrive within 3 s (e.g. through a tunnel), it switches to **long-polling** (`/api/poll`). Each player receives only their own view of the state.

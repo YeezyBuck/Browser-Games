@@ -2,7 +2,7 @@
 
 🇬🇧 [English version](README.md)
 
-Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie) i *plusk* (pudło).
+Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie) i *plusk* (pudło).
 
 Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i nigdy nie wysyła przeciwnikowi pozycji Twoich statków.
 
@@ -85,7 +85,7 @@ Potrzebujesz dwóch osób (albo dwóch kart przeglądarki do wypróbowania w poj
 1. Otwórz w przeglądarce adres z konsoli (`http://localhost:3000`).
 2. *(Opcjonalnie)* wybierz język przyciskami **Polski / English** u góry.
 3. Kliknij **Utwórz grę**. Pojawi się **6-literowy kod gry** i gotowe linki do przekazania przeciwnikowi:
-   - 🌐 **Przeciwnik w internecie**, widoczny, gdy działa tunel,
+   - 🌐 **Przeciwnik w internecie**, widoczny, gdy działa tunel, razem z **kodem QR**: przeciwnik może go zeskanować telefonem i od razu dołączyć,
    - 🏠 **Przeciwnik w tej samej sieci Wi-Fi/LAN**.
 4. Wyślij znajomemu odpowiedni link (przycisk **Kopiuj**) i poczekaj, aż dołączy.
 
@@ -136,6 +136,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 
 ### Dobrze wiedzieć
 - **Który adres komu?** 🌐 adres tunelu dla osób spoza Twojej sieci, 🏠 adres sieci lokalnej dla domowników.
+- **Kod QR:** obok linku 🌐 jest kod QR z tym samym linkiem (razem z kodem pokoju). Znajomy kieruje aparat telefonu na kod i otwiera grę, bez przepisywania. Pojawia się tylko wtedy, gdy działa tunel.
 - Adres tunelu jest **tymczasowy**, zmienia się przy każdym uruchomieniu tunelu. Komputer z serwerem musi być **włączony** przez cały czas gry.
 - Darmowy tunel nie przepuszcza strumienia na żywo (SSE). Gra po ok. 3 s **sama przełącza się na zapasowy transport** (long-polling). Dla graczy jest to niewidoczne.
 - Każdy, kto zna link **i** kod, może dołączyć jako drugi gracz, więc nie publikuj go w sieci.
@@ -159,6 +160,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 | Efekty dźwiękowe (boom, plusk, sygnał czatu) | przycisk 🔊 |
 | Obrót statku | przycisk **Obróć** albo klawisz **R** |
 | Kopiowanie linku | przycisk **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
+| Dołączenie z telefonu | zeskanuj **kod QR** z panelu oczekiwania (link przez internet) |
 | Odświeżenie strony | nie wyrzuca z gry: sesja jest zapamiętana w karcie przeglądarki |
 
 Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone animacje, jeśli system ma włączone „ogranicz ruch”.
@@ -211,7 +213,7 @@ Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długoś
 cd statki
 node test.js        # albo: npm test
 ```
-Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling i tunel (z atrapą programu). Na końcu: `Wszystkie testy przeszły (N)`.
+Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling, bibliotekę QR i tunel (z atrapą programu). Na końcu: `Wszystkie testy przeszły (N)`.
 
 ## 12. Budowa projektu (dla programistów)
 
@@ -228,7 +230,8 @@ statki/
     ├── app.js           logika klienta: ekrany, plansze, czat, transport
     ├── i18n.js          tłumaczenia PL/EN
     ├── music.js         muzyka generowana w Web Audio
-    └── sea.js           animowane tło (morze, statki piratów)
+    ├── sea.js           animowane tło (morze, statki piratów)
+    └── vendor/qrcode.js generator kodów QR (qrcode-generator, licencja MIT, dołączony bez zmian)
 ```
 
 **Jak to działa.** Serwer trzyma stan pokoi w pamięci i jest jedynym źródłem prawdy. Klient wysyła polecenia zwykłymi żądaniami POST, a zmiany stanu odbiera strumieniem **SSE**. Jeśli strumień nie dociera w 3 s (np. tunel), przełącza się na **long-polling** (`/api/poll`). Każdy gracz dostaje tylko swój widok stanu.

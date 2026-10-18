@@ -57,13 +57,14 @@ Wybierz jedną z dróg. Po starcie w konsoli pojawi się adres gry.
 - **`uruchom.bat`**: gra tylko w sieci domowej.
 - **`uruchom-tunel.bat`**: gra w sieci domowej **i przez internet** (wymaga cloudflared).
 
-Otworzy się okno konsoli: **nie zamykaj go podczas gry**. Jeśli Node.js nie jest w PATH, pliki `.bat` próbują użyć `C:\Program Files\nodejs\node.exe`.
+Otworzy się okno konsoli: **nie zamykaj go podczas gry**. Strona gry otworzy się **sama w przeglądarce** (`http://localhost:3000`). Jeśli Node.js nie jest w PATH, pliki `.bat` próbują użyć `C:\Program Files\nodejs\node.exe`. Na koniec użyj przycisku **⏻ Zamknij grę** w grze (zobacz [rozdział 8](#8-zatrzymanie-serwera)); okno konsoli zamknie się samo.
 
 ### Terminal (Windows, macOS, Linux)
 ```
 cd statki
 node server.js            # tylko sieć domowa
 node server.js --tunnel   # z tunelem Cloudflare (gra przez internet)
+node server.js --open     # dodatkowo otwórz grę w przeglądarce
 ```
 Skróty `npm`: `npm start` (bez tunelu) i `npm run tunnel` (z tunelem).
 
@@ -114,7 +115,15 @@ Flota: **1 × czteromasztowiec, 2 × trójmasztowce, 3 × dwumasztowce, 4 × jed
 
 Gdy przeciwnik jest poza Twoją siecią domową, użyj tunelu. Nie trzeba konta ani ustawiania routera.
 
-### Jednorazowa instalacja cloudflared
+### Instalacja cloudflared
+**Automatyczna (zalecana):** nie musisz niczego instalować ręcznie. Przy starcie z tunelem serwer **sprawdza, czy cloudflared jest zainstalowany**. Jeśli go nie ma, proponuje instalację (Windows: `winget`, macOS: `brew`) i pyta w oknie konsoli:
+```
+Nie znaleziono programu cloudflared (potrzebnego do gry przez internet).
+Zainstalować go teraz poleceniem "winget install Cloudflare.cloudflared"? [T/n]
+```
+Naciśnij **Enter** (albo `T`), aby zainstalować, lub `n`, aby pominąć. Windows może poprosić o zgodę w osobnym oknie: zatwierdź ją. W trakcie panel w grze pokazuje odpowiednią podpowiedź. Żeby zainstalować bez pytania, uruchom `node server.js --tunnel --yes` (albo ustaw `CLOUDFLARED_AUTO_INSTALL=1`). Gdy serwer działa bez interaktywnej konsoli (np. w tle), sam niczego nie instaluje: tylko wypisuje polecenie. Na Linuksie lub bez winget/brew wypisuje link do instrukcji.
+
+**Ręczna** (jeśli wolisz):
 - **Windows:** w PowerShellu `winget install Cloudflare.cloudflared`
 - **macOS:** `brew install cloudflared`
 - **Linux:** instrukcja pod <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/>
@@ -159,6 +168,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 | Muzyka | przycisk 🎵 wycisza/włącza; startuje po pierwszym kliknięciu na stronie (wymóg przeglądarek) |
 | Efekty dźwiękowe (boom, plusk, sygnał czatu) | przycisk 🔊 |
 | Obrót statku | przycisk **Obróć** albo klawisz **R** |
+| Zamknięcie gry | przycisk **⏻ Zamknij grę** u góry: wyłącza serwer i tunel (widoczny tylko w przeglądarce na komputerze z serwerem) |
 | Kopiowanie linku | przycisk **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
 | Dołączenie z telefonu | zeskanuj **kod QR** z panelu oczekiwania (link przez internet) |
 | Odświeżenie strony | nie wyrzuca z gry: sesja jest zapamiętana w karcie przeglądarki |
@@ -167,7 +177,8 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 
 ## 8. Zatrzymanie serwera
 
-- Uruchomiony przez `.bat` lub w terminalu: w oknie konsoli naciśnij **Ctrl+C** (albo zamknij okno).
+- **Najłatwiej:** kliknij **⏻ Zamknij grę** u góry strony gry (na komputerze, na którym działa serwer) i potwierdź. Serwer i tunel się wyłączą, okno konsoli zamknie się samo, a przeciwnik zobaczy komunikat „Gra została zamknięta”. Przycisk celowo **nie** jest dostępny dla przeciwnika ani przez tunel.
+- Alternatywnie w oknie konsoli naciśnij **Ctrl+C** (albo zamknij okno).
 - Zatrzymanie serwera **kończy wszystkie trwające gry** (pokoje są tylko w pamięci), a tunel zamyka się razem z nim.
 
 ## 9. Rozwiązywanie problemów
@@ -185,6 +196,9 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 | Ruchy przeciwnika pojawiają się z opóźnieniem ok. 3 s po wejściu przez tunel | To normalne: przełączenie na zapasowy transport. Dalsze aktualizacje są od razu. |
 | „Zbyt wiele żądań” | Zadziałał limit zabezpieczeń (np. dużo prób dołączenia). Odczekaj minutę. |
 | Strona wygląda po staremu po aktualizacji | Odśwież bez pamięci podręcznej: **Ctrl+F5**. |
+| Przeglądarka nie otworzyła się sama | Otwórz ręcznie `http://localhost:3000`. Automatyczne otwieranie działa tylko przy starcie z pliku `.bat` lub z flagą `--open`. |
+| Nie ma przycisku **⏻ Zamknij grę** | Jest widoczny tylko w przeglądarce na komputerze z serwerem, otwartej przez `localhost`/`127.0.0.1`. Użyj wtedy Ctrl+C w konsoli. |
+| Nie pojawiło się pytanie o instalację | Serwer nie działa w interaktywnej konsoli (np. uruchomiono go w tle). Uruchom `uruchom-tunel.bat` albo użyj flagi `--yes`. |
 
 ## 10. Ustawienia i zabezpieczenia
 
@@ -194,6 +208,8 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 | `PORT` | port serwera (domyślnie 3000) |
 | `--tunnel` lub `TUNNEL=1` | uruchom tunel Cloudflare |
 | `CLOUDFLARED` | pełna ścieżka do programu `cloudflared`, jeśli nie ma go w PATH |
+| `--yes` lub `CLOUDFLARED_AUTO_INSTALL=1` | zainstaluj cloudflared bez pytania, jeśli go brakuje |
+| `--open` lub `OPEN_BROWSER=1` | po starcie otwórz grę w domyślnej przeglądarce (pliki `.bat` to robią) |
 
 Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długość kodu, domyślnie 6) oraz obiekt `LIMITS`.
 
@@ -205,6 +221,7 @@ Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długoś
 - **Nagłówki bezpieczeństwa:** Content-Security-Policy (tylko własne skrypty), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 - **Za tunelem** prawdziwy adres klienta jest brany z nagłówka Cloudflare tylko dla połączeń z tego komputera. Adresy sieci domowej widzi tylko gospodarz.
 - Tokeny graczy są porównywane w stałym czasie; żądania mają limit rozmiaru i czasu.
+- **Przycisk zamykania:** żądanie wyłączenia jest przyjmowane tylko z komputera, na którym działa serwer (nie przez tunel i nie z sieci domowej), z jednorazowym tajnym tokenem, który dostaje wyłącznie lokalna przeglądarka, i tylko ze strony samej gry (nagłówek `Origin` musi pasować). Obca strona internetowa, przeciwnik ani osoba wchodząca przez tunel nie mogą wyłączyć serwera.
 - **Brak kont i haseł:** kto zna kod pokoju, może dołączyć jako drugi gracz. Nie wystawiaj gry do internetu inaczej niż przez tunel (HTTPS).
 
 ## 11. Testy
@@ -213,7 +230,7 @@ Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długoś
 cd statki
 node test.js        # albo: npm test
 ```
-Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling, bibliotekę QR i tunel (z atrapą programu). Na końcu: `Wszystkie testy przeszły (N)`.
+Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling, bibliotekę QR, tunel i instalację cloudflared (z atrapami programów) oraz zamykanie gry. Na końcu: `Wszystkie testy przeszły (N)`.
 
 ## 12. Budowa projektu (dla programistów)
 
@@ -243,6 +260,7 @@ statki/
 | `POST /api/create`, `/api/join` | założenie pokoju i dołączenie (kod → token gracza) |
 | `POST /api/place`, `/api/shoot`, `/api/rematch` | ustawienie floty, strzał, rewanż |
 | `POST /api/chat` | wiadomość czatu |
+| `POST /api/shutdown` | wyłączenie serwera i tunelu (tylko z lokalnego komputera, wymaga tajnego tokenu) |
 | `GET /api/events` | strumień stanu na żywo (SSE) |
 | `GET /api/poll` | zapasowy transport: long-polling |
 | `GET /api/state` | jednorazowy odczyt stanu |

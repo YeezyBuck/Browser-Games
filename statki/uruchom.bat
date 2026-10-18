@@ -9,5 +9,5 @@ if not exist "%NODE%" if /i not "%NODE%"=="node" (
   exit /b 1
 )
 echo Uruchamiam gre w statki (tylko siec domowa)...
-"%NODE%" server.js
-pause
+"%NODE%" server.js --open
+if errorlevel 1 pause

@@ -1,7 +1,7 @@
 'use strict';
 // Test integracyjny: uruchamia serwer na wolnym porcie i gra dwoma "graczami" przez HTTP.
 const assert = require('assert');
-const { server, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp } = require('./server');
+const { server, hooks, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp } = require('./server');
 
 let base;
 const post = async (p, body) => { const r = await fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, body: await r.json() }; };
@@ -213,6 +213,58 @@ async function main() {
   assert.ok(Array.isArray(info0.lan)); ok('/api/info: tunel wyłączony, adresy sieci domowej dla lokalnego klienta');
   assert.ok(TUNNEL_RE.test('2024 INF |  https://abc-def-123.trycloudflare.com  |') && !TUNNEL_RE.test('https://example.com')); ok('rozpoznawanie adresu trycloudflare w logu');
 
+  // ---------- sprawdzanie i instalacja cloudflared ----------
+  const fakeTunnel = ['-e', "console.error('https://fake-install-test.trycloudflare.com'); setInterval(() => {}, 1000);"];
+  const calls = () => ({ ask: 0, install: 0, statusAtInstall: null });
+  const mkDeps = (over = {}) => {
+    const c = calls();
+    const d = Object.assign({
+      find: () => null, pickInstaller: () => ({ cmd: 'x', args: [], text: 'winget install Cloudflare.cloudflared' }),
+      ask: async () => true, install: async () => true,
+      auto: false, interactive: true,
+    }, over);
+    const origAsk = d.ask, origInstall = d.install;
+    d.ask = async q => { c.ask++; return origAsk(q); };
+    d.install = async i => { c.install++; c.statusAtInstall = tunnel.status; return origInstall(i); };
+    return { d, c };
+  };
+  const stopFake = async () => { if (tunnel.child) { tunnel.child.kill(); } await new Promise(r => setTimeout(r, 250)); };
+  const waitUrl = async () => { for (let i = 0; i < 100 && !tunnel.url; i++) await new Promise(r => setTimeout(r, 50)); };
+
+  let t = mkDeps({ ask: async () => false });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel });
+  assert.strictEqual(tunnel.status, 'not_installed'); assert.strictEqual(t.c.ask, 1); assert.strictEqual(t.c.install, 0); ok('instalacja: odmowa w pytaniu -> nic nie jest instalowane');
+
+  t = mkDeps({ interactive: false });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel });
+  assert.strictEqual(tunnel.status, 'not_installed'); assert.strictEqual(t.c.ask, 0); assert.strictEqual(t.c.install, 0); ok('instalacja: bez konsoli interaktywnej nie instaluje bez zgody (i nie pyta)');
+
+  t = mkDeps({ pickInstaller: () => null, auto: true });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel });
+  assert.strictEqual(tunnel.status, 'not_installed'); assert.strictEqual(t.c.install, 0); ok('instalacja: brak instalatora w systemie -> instrukcja ręczna');
+
+  t = mkDeps({ auto: true, install: async () => false });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel });
+  assert.strictEqual(tunnel.status, 'not_installed'); assert.strictEqual(t.c.install, 1); ok('instalacja: nieudana instalacja -> status not_installed');
+
+  let ready = false;
+  t = mkDeps({ auto: true, interactive: false, find: () => (ready ? process.execPath : null), install: async () => { ready = true; return true; } });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel }); await waitUrl();
+  assert.strictEqual(t.c.ask, 0); assert.strictEqual(t.c.install, 1); assert.strictEqual(t.c.statusAtInstall, 'installing');
+  assert.strictEqual(tunnel.status, 'on'); assert.strictEqual(tunnel.url, 'https://fake-install-test.trycloudflare.com'); ok('instalacja: --yes -> instaluje bez pytania, potem uruchamia tunel');
+  await stopFake();
+
+  ready = false;
+  t = mkDeps({ find: () => (ready ? process.execPath : null), install: async () => { ready = true; return true; } });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel }); await waitUrl();
+  assert.strictEqual(t.c.ask, 1); assert.strictEqual(t.c.install, 1); assert.strictEqual(tunnel.status, 'on'); ok('instalacja: zgoda w pytaniu -> instaluje i uruchamia tunel');
+  await stopFake();
+
+  t = mkDeps({ find: () => process.execPath });
+  await startTunnel(0, { deps: t.d, args: fakeTunnel }); await waitUrl();
+  assert.strictEqual(t.c.ask, 0); assert.strictEqual(t.c.install, 0); assert.strictEqual(tunnel.status, 'on'); ok('instalacja: cloudflared już jest -> bez pytania i instalacji');
+  await stopFake();
+
   startTunnel(0, { bin: 'cloudflared-którego-nie-ma-xyz', args: [] });
   for (let i = 0; i < 50 && tunnel.status === 'starting'; i++) await new Promise(r => setTimeout(r, 50));
   assert.strictEqual((await (await fetch(base + '/api/info')).json()).tunnel, 'not_installed'); ok('brak cloudflared -> status not_installed');
@@ -226,6 +278,37 @@ async function main() {
   assert.strictEqual(remote.local, false); assert.deepStrictEqual(remote.lan, []); assert.strictEqual(remote.publicUrl, info1.publicUrl); ok('klient z internetu nie dostaje adresów sieci domowej');
   assert.strictEqual(clientIp({ socket: { remoteAddress: '::ffff:127.0.0.1' }, headers: { 'cf-connecting-ip': '198.51.100.5' } }), '198.51.100.5');
   assert.strictEqual(clientIp({ socket: { remoteAddress: '::ffff:192.168.1.50' }, headers: { 'cf-connecting-ip': '1.2.3.4' } }), '192.168.1.50'); ok('nagłówkom proxy ufamy tylko z localhost (brak podszywania się w LAN)');
+
+  // ---------- zamykanie gry (przycisk "Zamknij grę") ----------
+  const infoLocal = await (await fetch(base + '/api/info')).json();
+  assert.ok(/^[0-9a-f]{32}$/.test(infoLocal.adminToken)); ok('/api/info: lokalna przeglądarka dostaje token administratora');
+  const infoRemote = await (await fetch(base + '/api/info', { headers: { 'CF-Connecting-IP': '198.51.100.5' } })).json();
+  assert.strictEqual(infoRemote.adminToken, null); ok('/api/info: klient z internetu (tunel) nie dostaje tokenu');
+  const infoProxy = await (await fetch(base + '/api/info', { headers: { 'X-Forwarded-For': '198.51.100.5' } })).json();
+  assert.strictEqual(infoProxy.adminToken, null); ok('/api/info: żądanie z nagłówkiem proxy też nie dostaje tokenu');
+
+  let exitCode = null; hooks.exit = c => { exitCode = c; };
+  const quit = (headers) => fetch(base + '/api/shutdown', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, headers), body: '{}' });
+  assert.strictEqual((await quit({})).status, 403); ok('zamykanie: bez tokenu -> 403');
+  assert.strictEqual((await quit({ 'X-Admin-Token': 'zly' })).status, 403); ok('zamykanie: zły token -> 403');
+  assert.strictEqual((await quit({ 'X-Admin-Token': infoLocal.adminToken, 'CF-Connecting-IP': '198.51.100.5' })).status, 403); ok('zamykanie: poprawny token, ale żądanie przez tunel -> 403');
+  assert.strictEqual((await quit({ 'X-Admin-Token': infoLocal.adminToken, 'Origin': 'http://zlosliwa-strona.example' })).status, 403); ok('zamykanie: inna strona (Origin) nie może wyłączyć serwera -> 403');
+  assert.strictEqual((await fetch(base + '/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' })).status, 403); ok('zamykanie: zwykły POST z formularza/obcej strony (bez tokenu) -> 403');
+  assert.strictEqual(exitCode, null); ok('zamykanie: odrzucone próby nie wyłączyły serwera');
+
+  const qa = (await post('/api/create', {})).body, qb = (await post('/api/join', { code: qa.code })).body;
+  const q0 = (await get(`/api/state?code=${qa.code}&token=${qa.token}`)).body;
+  assert.strictEqual(q0.closed, false);
+  LIMITS.pollMs = 5000;
+  const quitWaiter = get(`/api/poll?code=${qb.code}&token=${qb.token}&v=${q0.v}`);
+  await new Promise(r => setTimeout(r, 100));
+  const okQuit = await quit({ 'X-Admin-Token': infoLocal.adminToken, 'Origin': base });
+  assert.strictEqual(okQuit.status, 200); ok('zamykanie: poprawny token z lokalnej strony -> 200');
+  const closedState = await quitWaiter;
+  assert.strictEqual(closedState.body.closed, true); ok('zamykanie: gracze dostają stan "closed" (long-poll budzony od razu)');
+  await new Promise(r => setTimeout(r, 1000));
+  assert.strictEqual(exitCode, 0); ok('zamykanie: serwer kończy proces (kod 0) po przekazaniu informacji graczom');
+  assert.strictEqual(tunnel.child === null || tunnel.child.killed, true); ok('zamykanie: proces tunelu zatrzymany');
 
   console.log('\nWszystkie testy przeszły (' + n + ').');
   server.close(); process.exit(0);

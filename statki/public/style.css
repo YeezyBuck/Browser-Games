@@ -154,3 +154,7 @@ input { width: 110px; text-transform: uppercase; letter-spacing: .25em; text-ali
 .qr-box { display: flex; gap: 14px; align-items: center; margin: 8px 0 4px; flex-wrap: wrap; }
 .qr-box canvas { background: #fff; border-radius: 8px; flex: none; image-rendering: pixelated; }
 .qr-box .qr-hint { margin: 0; color: var(--muted); font-size: .9rem; max-width: 220px; }
+
+/* Przycisk zamykania gry */
+button.danger { border-color: #e03131; color: #ffb4b4; }
+button.danger:hover:not(:disabled) { background: rgba(224, 49, 49, 0.25); }

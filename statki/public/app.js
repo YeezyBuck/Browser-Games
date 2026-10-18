@@ -408,13 +408,33 @@ $('#chatForm').addEventListener('submit', async ev => {
 
 // ---------- ekrany ----------
 function show(id) {
-  ['lobby', 'waiting', 'placing', 'game'].forEach(n => { $('#' + n).hidden = n !== id; });
+  ['lobby', 'waiting', 'placing', 'game', 'closedScreen'].forEach(n => { $('#' + n).hidden = n !== id; });
 }
 
 // ---------- adresy do przekazania przeciwnikowi ----------
 async function loadInfo() {
   try { info = await (await fetch('/api/info', { cache: 'no-store' })).json(); } catch (e) {}
+  $('#quitBtn').hidden = closed || !(info && info.adminToken);                 // przycisk tylko dla przeglądarki na komputerze z serwerem
 }
+
+// Ekran końcowy po zamknięciu gry (przez gospodarza): zatrzymuje wszystko, czyści sesję.
+let closed = false;
+function showClosed() {
+  closed = true;
+  stopTransport();
+  saveSession(null); state = null;
+  $('#roomInfo').hidden = true; $('#chat').hidden = true; $('#quitBtn').hidden = true;
+  banner('');
+  show('closedScreen');
+}
+$('#quitBtn').addEventListener('click', async () => {
+  if (!info || !info.adminToken || !confirm(t('quit.confirm'))) return;
+  try {
+    const r = await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': info.adminToken }, body: '{}' });
+    if (!r.ok) throw Object.assign(new Error(''), { code: 'forbidden' });
+    showClosed();
+  } catch (e) { toast(errorText(e)); }
+});
 function roomUrl(base) { return base.replace(/\/$/, '') + '/?room=' + session.code; }
 // Najlepszy link do skopiowania: internet (tunel) jeśli jest, w przeciwnym razie adres, pod którym działa strona.
 function roomLink() { return roomUrl(info && info.publicUrl ? info.publicUrl : location.origin); }
@@ -472,7 +492,7 @@ function renderShare() {
   });
   // wskazówka o tunelu – tylko dla gospodarza (z komputera/sieci domowej)
   if (info && info.local) {
-    const noteKey = { starting: 'share.tunnelStarting', not_installed: 'share.tunnelMissing', error: 'share.tunnelError', off: 'share.tunnelOff' }[info.tunnel];
+    const noteKey = { starting: 'share.tunnelStarting', install_prompt: 'share.tunnelPrompt', installing: 'share.tunnelInstalling', not_installed: 'share.tunnelMissing', error: 'share.tunnelError', off: 'share.tunnelOff' }[info.tunnel];
     if (noteKey) { const n = document.createElement('p'); n.className = 'share-note'; n.textContent = t(noteKey); box.appendChild(n); }
   }
 }
@@ -481,6 +501,7 @@ setInterval(async () => {                  // tunel potrafi wstać dopiero po ch
 }, 3000);
 
 function render() {
+  if (closed) { show('closedScreen'); return; }
   const info = $('#roomInfo');
   if (!session || !state) {
     info.hidden = true;
@@ -514,6 +535,7 @@ function render() {
 
 // ---------- połączenie ----------
 function onState(s) {
+  if (s.closed) return showClosed();
   const prevPhase = state && state.phase;
   const prevChat = state && state.chat && state.chat.length ? state.chat[state.chat.length - 1].id : (state ? 0 : undefined);
   state = s;

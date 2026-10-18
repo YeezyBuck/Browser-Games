@@ -57,13 +57,14 @@ Pick one of the options. After startup the console shows the game address.
 - **`uruchom.bat`**: play on your home network only.
 - **`uruchom-tunel.bat`**: play on your home network **and over the internet** (needs cloudflared).
 
-A console window opens: **do not close it while playing**. If Node.js is not in the PATH, the `.bat` files try `C:\Program Files\nodejs\node.exe`.
+A console window opens: **do not close it while playing**. The game page opens **automatically in your browser** (`http://localhost:3000`). If Node.js is not in the PATH, the `.bat` files try `C:\Program Files\nodejs\node.exe`. To finish, use the **⏻ Quit game** button in the game (see [section 8](#8-stopping-the-server)); the console window closes by itself.
 
 ### Terminal (Windows, macOS, Linux)
 ```
 cd statki
 node server.js            # home network only
 node server.js --tunnel   # with a Cloudflare tunnel (internet play)
+node server.js --open     # additionally open the game in your browser
 ```
 `npm` shortcuts: `npm start` (no tunnel) and `npm run tunnel` (with tunnel).
 
@@ -115,7 +116,15 @@ Fleet: **1 × four-cell ship, 2 × three-cell, 3 × two-cell, 4 × one-cell.** S
 
 If your opponent is outside your home network, use the tunnel. No account and no router setup needed.
 
-### One-time cloudflared installation
+### Installing cloudflared
+**Automatic (recommended):** you do not have to install anything by hand. When you start with the tunnel, the server **checks whether cloudflared is present**. If it is missing, it offers to install it (Windows: `winget`, macOS: `brew`) and asks in the console window:
+```
+Nie znaleziono programu cloudflared (potrzebnego do gry przez internet).
+Zainstalować go teraz poleceniem "winget install Cloudflare.cloudflared"? [T/n]
+```
+("Not found... Install it now with the command…? [Y/n]".) Press **Enter** (or `T`) to install, `n` to skip. Windows may ask for permission in a separate window: confirm it. While this is happening, the game panel shows a matching hint. To install without being asked, start with `node server.js --tunnel --yes` (or set `CLOUDFLARED_AUTO_INSTALL=1`). When the server runs without an interactive console (e.g. in the background) it never installs anything on its own; it only prints the command. On Linux, or without winget/brew, it prints a link to the instructions.
+
+**Manual** (if you prefer):
 - **Windows:** in PowerShell run `winget install Cloudflare.cloudflared`
 - **macOS:** `brew install cloudflared`
 - **Linux:** see <https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/>
@@ -161,6 +170,7 @@ After installing, open a new terminal window. (The server also checks the typica
 | Music | 🎵 button mutes/unmutes; starts after the first click on the page (browser requirement) |
 | Sound effects (boom, splash, chat beep) | 🔊 button |
 | Rotating a ship | **Rotate** button or the **R** key |
+| Quitting the game | **⏻ Quit game** button at the top; it shuts down the server and the tunnel (visible only in the browser on the computer running the server) |
 | Copying the link | **Copy** button in the waiting panel or **Copy link** at the top |
 | Joining from a phone | scan the **QR code** shown in the waiting panel (internet link) |
 | Refreshing the page | does not kick you out: the session is remembered in the browser tab |
@@ -169,7 +179,8 @@ The language and mute choices are remembered in the browser. The background anim
 
 ## 8. Stopping the server
 
-- Started with a `.bat` file or in a terminal: press **Ctrl+C** in the console window (or close the window).
+- **Easiest:** click **⏻ Quit game** at the top of the game page (on the computer where the server runs) and confirm. The server and tunnel shut down, the console window closes, and your opponent sees the message "The game has been closed". The button is deliberately **not** available to your opponent or through the tunnel.
+- Alternatively, in the console window press **Ctrl+C** (or close the window).
 - Stopping the server **ends all games in progress** (rooms are kept in memory only), and the tunnel closes with it.
 
 ## 9. Troubleshooting
@@ -187,6 +198,9 @@ The language and mute choices are remembered in the browser. The background anim
 | Opponent's moves appear about 3 s late right after joining via the tunnel | Normal: it is switching to the fallback transport. Later updates are instant. |
 | "Too many requests" | A safety limit kicked in (e.g. many join attempts). Wait a minute. |
 | The page looks old after an update | Refresh without cache: **Ctrl+F5**. |
+| The browser did not open by itself | Open `http://localhost:3000` manually. Automatic opening works only when started with a `.bat` file or with the `--open` flag. |
+| No **⏻ Quit game** button | It is shown only in the browser on the computer running the server, opened via `localhost`/`127.0.0.1`. Use Ctrl+C in the console instead. |
+| The install question did not appear | The server is not running in an interactive console (e.g. it was started in the background). Start `uruchom-tunel.bat`, or use the `--yes` flag. |
 
 ## 10. Settings and security
 
@@ -196,6 +210,8 @@ The language and mute choices are remembered in the browser. The background anim
 | `PORT` | server port (default 3000) |
 | `--tunnel` or `TUNNEL=1` | start the Cloudflare tunnel |
 | `CLOUDFLARED` | full path to the `cloudflared` program if it is not in the PATH |
+| `--yes` or `CLOUDFLARED_AUTO_INSTALL=1` | install cloudflared without asking if it is missing |
+| `--open` or `OPEN_BROWSER=1` | open the game in the default browser after start (the `.bat` files do this) |
 
 Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code length, default 6) and the `LIMITS` object.
 
@@ -207,6 +223,7 @@ Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code
 - **Security headers:** Content-Security-Policy (own scripts only), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 - **Behind the tunnel** the real client address is taken from the Cloudflare header only for connections coming from this computer. Home-network addresses are shown to the host only.
 - Player tokens are compared in constant time; requests have size and time limits.
+- **Quit button:** the shutdown request is accepted only from the computer running the server (not through the tunnel, not from the home network), with a one-time secret token that only the local browser receives, and only from the game's own page (the `Origin` header must match). A foreign web page, your opponent or a visitor via the tunnel cannot shut the server down.
 - **No accounts or passwords:** anyone who knows the room code can join as the second player. Do not expose the game to the internet other than through the tunnel (HTTPS).
 
 ## 11. Tests
@@ -215,7 +232,7 @@ Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code
 cd statki
 node test.js        # or: npm test
 ```
-The test starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling, the QR library and the tunnel (using a stand-in program). At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
+The test starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling, the QR library, the tunnel and cloudflared installation (using stand-in programs) and shutting down. At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
 
 ## 12. Project structure (for developers)
 
@@ -245,6 +262,7 @@ statki/
 | `POST /api/create`, `/api/join` | create a room and join it (code → player token) |
 | `POST /api/place`, `/api/shoot`, `/api/rematch` | place the fleet, fire a shot, rematch |
 | `POST /api/chat` | chat message |
+| `POST /api/shutdown` | shut down the server and tunnel (local computer only, needs the secret token) |
 | `GET /api/events` | live state stream (SSE) |
 | `GET /api/poll` | fallback transport: long-polling |
 | `GET /api/state` | one-off state read |

@@ -9,7 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
+const readline = require('readline');
 
 const PORT = Number(process.env.PORT) || 3000;
 const SIZE = 10;
@@ -121,6 +122,7 @@ function viewFor(room, pi) {
     opponentConnected: !!opp && isOnline(room, 1 - pi),
     v: room.version || 0,
     chat: (room.chat || []).slice(-50),
+    closed: !!room.closed,
     youReady: me.ready,
     opponentReady: !!opp && opp.ready,
     youWantRematch: me.rematch,
@@ -269,6 +271,12 @@ function securityHeaders(res) {
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 }
 
+const ADMIN_TOKEN = crypto.randomBytes(16).toString('hex');       // nowy przy każdym starcie serwera
+// Połączenie z tego samego komputera (127.0.0.1 / ::1) bez nagłówków proxy – nie przez tunel i nie z sieci domowej.
+function isLoopbackClient(req) {
+  return isLoopback(stripV6(req.socket.remoteAddress)) && !req.headers['cf-connecting-ip'] && !req.headers['x-forwarded-for'];
+}
+
 function safeEqual(a, b) {
   const x = Buffer.from(String(a)), y = Buffer.from(String(b));
   return x.length === y.length && crypto.timingSafeEqual(x, y);
@@ -276,16 +284,81 @@ function safeEqual(a, b) {
 
 // ---------- tunel Cloudflare (gra przez internet) ----------
 const TUNNEL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i;
-const tunnel = { requested: false, url: null, status: 'off', child: null };   // status: off | starting | on | not_installed | error
+// status: off | starting | install_prompt | installing | on | not_installed | error
+const tunnel = { requested: false, url: null, status: 'off', child: null };
+const CLOUDFLARED_DOCS = 'https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/';
+const KNOWN_CLOUDFLARED = ['C:/Program Files (x86)/cloudflared/cloudflared.exe', 'C:/Program Files/cloudflared/cloudflared.exe'];
 
-function startTunnel(port, opts = {}) {
-  tunnel.requested = true; tunnel.status = 'starting'; tunnel.url = null;
-  let bin = opts.bin || process.env.CLOUDFLARED;
-  if (!bin) {
-    // po świeżej instalacji PATH w już otwartych oknach bywa nieaktualny – sprawdzamy typowe miejsca instalacji
-    const known = ['C:/Program Files (x86)/cloudflared/cloudflared.exe', 'C:/Program Files/cloudflared/cloudflared.exe'];
-    bin = (process.platform === 'win32' && known.find(f => fs.existsSync(f))) || 'cloudflared';
+const runs = (cmd, args) => { try { return spawnSync(cmd, args, { stdio: 'ignore', windowsHide: true }).status === 0; } catch (e) { return false; } };
+
+// Szuka programu cloudflared: zmienna CLOUDFLARED, PATH, a na Windows typowe foldery instalacji
+// (po świeżej instalacji PATH w już otwartych oknach bywa nieaktualny).
+function findCloudflared() {
+  if (process.env.CLOUDFLARED) return process.env.CLOUDFLARED;
+  if (runs('cloudflared', ['--version'])) return 'cloudflared';
+  if (process.platform === 'win32') { const f = KNOWN_CLOUDFLARED.find(x => fs.existsSync(x)); if (f) return f; }
+  return null;
+}
+
+// Czym da się zainstalować cloudflared na tym systemie (albo null, gdy trzeba ręcznie).
+function pickInstaller() {
+  if (process.platform === 'win32' && runs('winget', ['--version']))
+    return { cmd: 'winget', args: ['install', '--id', 'Cloudflare.cloudflared', '--exact', '--accept-package-agreements', '--accept-source-agreements'], text: 'winget install Cloudflare.cloudflared' };
+  if (process.platform === 'darwin' && runs('brew', ['--version']))
+    return { cmd: 'brew', args: ['install', 'cloudflared'], text: 'brew install cloudflared' };
+  return null;
+}
+
+function askYesNo(question) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.on('SIGINT', () => { rl.close(); process.exit(0); });
+    rl.on('close', () => resolve(false));                                   // zamknięty wejście bez odpowiedzi = nie
+    rl.question(question, ans => { resolve(!/^\s*(n|nie|no)\b/i.test(ans)); rl.close(); });   // Enter = tak
+  });
+}
+
+function runInstaller(inst) {
+  return new Promise(resolve => {
+    let child;
+    try { child = spawn(inst.cmd, inst.args, { stdio: 'inherit' }); } catch (e) { return resolve(false); }
+    child.on('error', () => resolve(false));
+    child.on('exit', code => resolve(code === 0));
+  });
+}
+
+// Zwraca ścieżkę do cloudflared albo null. Gdy programu nie ma, proponuje instalację:
+// pyta w konsoli (Enter = tak) albo instaluje od razu przy fladze --yes / CLOUDFLARED_AUTO_INSTALL=1.
+// Bez konsoli interaktywnej (np. serwer w tle) niczego nie instaluje bez zgody – tylko podpowiada polecenie.
+async function ensureCloudflared(deps = {}) {
+  const find = deps.find || findCloudflared, pick = deps.pickInstaller || pickInstaller;
+  const ask = deps.ask || askYesNo, install = deps.install || runInstaller;
+  const found = find();
+  if (found) return found;
+  console.log('Nie znaleziono programu cloudflared (potrzebnego do gry przez internet).');
+  const inst = pick();
+  if (!inst) { console.log(`Zainstaluj go ręcznie: ${CLOUDFLARED_DOCS}`); return null; }
+  const auto = deps.auto !== undefined ? deps.auto : (process.env.CLOUDFLARED_AUTO_INSTALL === '1' || process.argv.includes('--yes'));
+  const interactive = deps.interactive !== undefined ? deps.interactive : !!process.stdin.isTTY;
+  if (!auto) {
+    if (!interactive) { console.log(`Zainstaluj go poleceniem: ${inst.text}  (albo uruchom serwer z flagą --yes, by zainstalować automatycznie)`); return null; }
+    tunnel.status = 'install_prompt';
+    if (!(await ask(`Zainstalować go teraz poleceniem "${inst.text}"? [T/n] `))) { console.log('Pomijam instalację – gra przez internet nie będzie dostępna.'); return null; }
   }
+  tunnel.status = 'installing';
+  console.log(`Instaluję cloudflared: ${inst.text}\n(Windows może poprosić o zgodę w osobnym oknie – zatwierdź ją.)\n`);
+  const ok = await install(inst);
+  const found2 = ok ? find() : null;
+  if (!found2) { console.log(`Instalacja nie powiodła się. Zainstaluj ręcznie: ${inst.text}`); return null; }
+  console.log('cloudflared zainstalowany.\n');
+  return found2;
+}
+
+async function startTunnel(port, opts = {}) {
+  tunnel.requested = true; tunnel.status = 'starting'; tunnel.url = null;
+  const bin = opts.bin || await ensureCloudflared(opts.deps);
+  if (!bin) { tunnel.status = 'not_installed'; return; }
+  tunnel.status = 'starting';
   const args = opts.args || ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${port}`];
   let child;
   try {
@@ -305,12 +378,12 @@ function startTunnel(port, opts = {}) {
     tunnel.child = null;
     if (err.code === 'ENOENT') {
       tunnel.status = 'not_installed';
-      console.log('Nie znaleziono programu cloudflared. Zainstaluj go: winget install Cloudflare.cloudflared (potem uruchom serwer ponownie).');
+      console.log(`Nie znaleziono programu cloudflared. Zainstaluj go: winget install Cloudflare.cloudflared (więcej: ${CLOUDFLARED_DOCS}).`);
     } else { tunnel.status = 'error'; console.log('Błąd tunelu:', err.message); }
   });
   child.on('exit', code => {
-    tunnel.child = null; tunnel.url = null;
-    if (tunnel.status !== 'not_installed') { tunnel.status = 'error'; console.log('Tunel Cloudflare zakończył pracę (kod ' + code + ').'); }
+    if (tunnel.child === child) { tunnel.child = null; tunnel.url = null; }
+    if (tunnel.status !== 'not_installed' && tunnel.child === null) { tunnel.status = 'error'; console.log('Tunel Cloudflare zakończył pracę (kod ' + code + ').'); }
   });
   const stop = () => { try { child.kill(); } catch (e) {} };
   process.on('exit', stop);
@@ -339,7 +412,7 @@ const ERR_PL = {
   fleet_overlap: 'Statki nachodzą na siebie.', fleet_mix: 'Zły skład floty.', fleet_touch: 'Statki nie mogą się stykać.',
   not_placing: 'Teraz nie można ustawiać statków.', already_ready: 'Statki są już zatwierdzone.', not_playing: 'Gra nie trwa.',
   not_your_turn: 'To nie Twoja kolej.', out_of_board: 'Pole poza planszą.', already_shot: 'W to pole już strzelałeś.',
-  not_over: 'Gra jeszcze trwa.', rate_limited: 'Zbyt wiele żądań – spróbuj za chwilę.', chat_invalid: 'Nieprawidłowa wiadomość.', no_opponent: 'Przeciwnik jeszcze nie dołączył.', too_many_rooms: 'Serwer ma za dużo gier – spróbuj później.', too_many_conns: 'Zbyt wiele połączeń.', room_full: 'W tej grze są już dwie osoby.', bad_request: 'Błędne żądanie.',
+  not_over: 'Gra jeszcze trwa.', rate_limited: 'Zbyt wiele żądań – spróbuj za chwilę.', forbidden: 'Brak uprawnień.', chat_invalid: 'Nieprawidłowa wiadomość.', no_opponent: 'Przeciwnik jeszcze nie dołączył.', too_many_rooms: 'Serwer ma za dużo gier – spróbuj później.', too_many_conns: 'Zbyt wiele połączeń.', room_full: 'W tej grze są już dwie osoby.', bad_request: 'Błędne żądanie.',
   no_room: 'Nie ma gry o takim kodzie.', no_game: 'Nie ma takiej gry.', unknown_cmd: 'Nieznane polecenie.',
 };
 const fail = (res, status, code) => sendJson(res, status, { code, error: ERR_PL[code] || code });
@@ -383,7 +456,7 @@ const server = http.createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && p === '/api/info') {
       const local = isLocalClient(req);
-      return sendJson(res, 200, { publicUrl: tunnel.url, tunnel: tunnel.requested ? tunnel.status : 'off', lan: local ? lanUrls() : [], local, codeLen: CODE_LEN });
+      return sendJson(res, 200, { publicUrl: tunnel.url, tunnel: tunnel.requested ? tunnel.status : 'off', lan: local ? lanUrls() : [], local, codeLen: CODE_LEN, adminToken: isLoopbackClient(req) ? ADMIN_TOKEN : null });
     }
     if (req.method === 'GET' && p === '/api/events') {
       const a = auth(url.searchParams.get('code'), url.searchParams.get('token'));
@@ -432,6 +505,18 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && p.startsWith('/api/')) {
       const body = await readJson(req);
+      if (p === '/api/shutdown') {
+        // Wyłączenie serwera: tylko z tego komputera (nie przez tunel ani z sieci domowej), z tokenem, który widzi
+        // wyłącznie lokalna przeglądarka, i tylko z naszej strony (nagłówek Origin musi pasować do Host).
+        const origin = req.headers.origin;
+        let sameOrigin = true;
+        if (origin) { try { sameOrigin = new URL(origin).host === req.headers.host; } catch (e) { sameOrigin = false; } }
+        const token = req.headers['x-admin-token'];
+        if (!isLoopbackClient(req) || !sameOrigin || typeof token !== 'string' || !safeEqual(token, ADMIN_TOKEN)) return fail(res, 403, 'forbidden');
+        sendJson(res, 200, { ok: true });
+        shutdown();
+        return;
+      }
       if (p === '/api/create') {
         if (!allow('create', ip, LIMITS.createPer10Min, 10 * 60000)) return fail(res, 429, 'rate_limited');
         if (rooms.size >= LIMITS.maxRooms) return fail(res, 503, 'too_many_rooms');
@@ -501,19 +586,44 @@ function broadcastPresenceIfChanged(room) {
 }
 setInterval(() => { for (const room of rooms.values()) broadcastPresenceIfChanged(room); }, 4000).unref();
 
+// Zamknięcie gry: informuje graczy (stan "closed"), zatrzymuje tunel i kończy proces.
+const hooks = { exit: code => process.exit(code) };
+let shuttingDown = false;
+function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log('\nZamykam grę: wyłączam serwer i tunel…');
+  for (const room of rooms.values()) { room.closed = true; broadcast(room); }
+  if (tunnel.child) { try { tunnel.child.kill(); } catch (e) {} }
+  setTimeout(() => { try { server.close(); } catch (e) {} hooks.exit(0); }, 700);
+}
+
+// Otwiera stronę w domyślnej przeglądarce (flaga --open lub OPEN_BROWSER=1).
+function openBrowser(url) {
+  try {
+    const [cmd, args] = process.platform === 'win32' ? ['cmd.exe', ['/c', 'start', '', url]]
+      : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+    const c = spawn(cmd, args, { detached: true, stdio: 'ignore', windowsHide: true });
+    c.on('error', () => console.log('Nie udało się otworzyć przeglądarki – otwórz ręcznie: ' + url));
+    c.unref();
+    console.log('Otwieram przeglądarkę: ' + url);
+  } catch (e) { console.log('Nie udało się otworzyć przeglądarki – otwórz ręcznie: ' + url); }
+}
+
 if (require.main === module) {
   server.headersTimeout = 15000;
   server.requestTimeout = 30000;
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`Statki działają: http://localhost:${PORT}`);
     lanUrls().forEach(u => console.log(`  w sieci lokalnej: ${u}`));
+    if (process.argv.includes('--open') || process.env.OPEN_BROWSER === '1') openBrowser(`http://localhost:${PORT}`);
     if (process.argv.includes('--tunnel') || process.env.TUNNEL === '1') {
       console.log('Uruchamiam tunel Cloudflare (gra przez internet)…');
-      startTunnel(PORT);
+      startTunnel(PORT).catch(e => console.log('Błąd uruchamiania tunelu:', e.message));
     } else {
       console.log('Gra przez internet: uruchom serwer z tunelem (npm run tunnel lub uruchom-tunel.bat).');
     }
   });
 }
 
-module.exports = { server, cleanChat, parseFleet, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp };
+module.exports = { server, hooks, findCloudflared, pickInstaller, cleanChat, parseFleet, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Kropki</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ccircle cx=%2730%27 cy=%2770%27 r=%2714%27 fill=%27%23ff5d73%27/%3E%3Ccircle cx=%2770%27 cy=%2730%27 r=%2714%27 fill=%27%234aa8ff%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<canvas id="fireworks" aria-hidden="true" hidden></canvas>
+<header>
+  <h1 data-i18n="h1">● Kropki</h1>
+  <div class="head-right">
+    <div id="roomInfo" hidden><span data-i18n="room">Pokój:</span> <strong id="roomCode"></strong> <button id="copyLink" type="button" data-i18n="copyLink">Kopiuj link</button></div>
+    <button id="quitBtn" class="danger" type="button" hidden data-i18n="quit.btn" data-i18n-title="quit.title" title="Wyłącz serwer i tunel">⏻ Zamknij grę</button>
+    <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Język">
+      <button type="button" data-lang="pl" aria-pressed="true">🇵🇱 Polski</button>
+      <button type="button" data-lang="en" aria-pressed="false">🇬🇧 English</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="banner" role="status" aria-live="polite"></div>
+
+  <section id="lobby" hidden>
+    <div class="card">
+      <h2 data-i18n="lobby.new">Nowa gra</h2>
+      <p data-i18n="lobby.newText">Utwórz grę i wyślij znajomemu kod lub link.</p>
+      <label class="size-pick"><span data-i18n="lobby.size">Rozmiar planszy</span>
+        <select id="sizeSelect">
+          <option value="s" data-i18n="size.s">Mała 15×15</option>
+          <option value="m" data-i18n="size.m" selected>Średnia 20×20</option>
+          <option value="l" data-i18n="size.l">Duża 30×20</option>
+        </select>
+      </label>
+      <button id="createBtn" class="primary" type="button" data-i18n="lobby.create">Utwórz grę</button>
+    </div>
+    <div class="card">
+      <h2 data-i18n="lobby.join">Dołącz do gry</h2>
+      <p data-i18n="lobby.joinText">Wpisz kod od znajomego.</p>
+      <form id="joinForm">
+        <input id="joinCode" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="KOD" data-i18n-placeholder="lobby.code" data-i18n-aria="lobby.codeAria" aria-label="Kod gry">
+        <button class="primary" type="submit" data-i18n="lobby.joinBtn">Dołącz</button>
+      </form>
+    </div>
+    <details class="card rules" open>
+      <summary data-i18n="rules.title">Zasady gry</summary>
+      <ul>
+        <li data-i18n="rules.1">Gracze na zmianę stawiają kropkę w swoim kolorze na przecięciu linii siatki.</li>
+        <li data-i18n="rules.2">Zamknij pętlą własnych kropek (łączą się też po przekątnej) kropki przeciwnika, aby je przejąć. Każda przejęta kropka to punkt.</li>
+        <li data-i18n="rules.3">Obszar wewnątrz przejętej pętli zostaje zablokowany. Nie możesz postawić kropki w polu otoczonym przez przeciwnika.</li>
+        <li data-i18n="rules.4">Gra kończy się, gdy zabraknie ruchów albo gdy obaj gracze zgodzą się zakończyć. Wygrywa ten, kto przejął więcej kropek.</li>
+      </ul>
+    </details>
+  </section>
+
+  <section id="waiting" hidden>
+    <div class="card">
+      <h2 data-i18n="wait.title">Czekam na przeciwnika…</h2>
+      <p><span data-i18n="wait.give">Kod gry:</span> <strong class="big" id="waitCode"></strong></p>
+      <p class="share-intro" data-i18n="share.intro">Przekaż przeciwnikowi jeden z adresów – zależy, gdzie jest:</p>
+      <div id="shareBox"></div>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="scorebar">
+      <div class="pcard" id="cardYou"><span class="swatch" id="swYou"></span><span class="who" data-i18n="game.you">Ty</span><span class="colname" id="colYou"></span><strong id="scoreYou">0</strong></div>
+      <div class="vs" id="vs">:</div>
+      <div class="pcard" id="cardOpp"><span class="swatch" id="swOpp"></span><span class="who" data-i18n="game.opp">Przeciwnik</span><span class="colname" id="colOpp"></span><strong id="scoreOpp">0</strong></div>
+    </div>
+    <p class="subtle" data-i18n="game.captured">Przejęte kropki przeciwnika</p>
+    <div id="offerBox" class="card" hidden>
+      <p id="offerText"></p>
+      <div class="row">
+        <button id="offerAccept" class="primary" type="button" data-i18n="offer.accept">Zgoda</button>
+        <button id="offerReject" type="button" data-i18n="offer.reject">Odrzuć</button>
+        <button id="offerCancel" type="button" data-i18n="offer.cancel">Wycofaj</button>
+      </div>
+    </div>
+    <div class="board-wrap"><canvas id="board" aria-label="Plansza" data-i18n-aria="board.aria"></canvas></div>
+    <div class="actions" id="actions">
+      <button id="offerBtn" type="button" data-i18n="offer.btn">Zakończ i policz punkty</button>
+      <button id="resignBtn" class="danger" type="button" data-i18n="resign.btn">Poddaj się</button>
+    </div>
+    <div id="overBox" class="card" hidden>
+      <button id="fireworksBtn" type="button" hidden data-i18n="fireworks.btn">🎆 Fajerwerki</button>
+      <button id="rematchBtn" class="primary" type="button" data-i18n="rematch">Zagraj ponownie</button>
+    </div>
+  </section>
+
+  <section id="closedScreen" hidden>
+    <div class="card">
+      <h2 data-i18n="closed.title">Gra została zamknięta</h2>
+      <p data-i18n="closed.text">Serwer i tunel zostały wyłączone. Możesz zamknąć tę kartę przeglądarki.</p>
+      <p id="closedAuto" class="share-note" hidden></p>
+    </div>
+  </section>
+</main>
+
+<div id="chat" class="chat" hidden>
+  <button id="chatToggle" type="button" aria-expanded="false" aria-controls="chatPanel" title="Czat" data-i18n-title="chat.title">
+    <span aria-hidden="true">💬</span><span id="chatBadge" class="badge" hidden>0</span>
+  </button>
+  <div id="chatPanel" class="chat-panel" role="dialog" aria-label="Czat" data-i18n-aria="chat.title" hidden>
+    <div class="chat-head"><strong data-i18n="chat.title">Czat</strong><button id="chatClose" type="button" aria-label="Zamknij" data-i18n-aria="chat.close">✕</button></div>
+    <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" maxlength="200" autocomplete="off" placeholder="Napisz do przeciwnika…" data-i18n-placeholder="chat.placeholder" aria-label="Wiadomość" data-i18n-aria="chat.message">
+      <button class="primary" type="submit" data-i18n="chat.send">Wyślij</button>
+    </form>
+  </div>
+</div>
+
+<div class="sound-btns">
+  <button id="musicBtn" type="button" aria-pressed="false" title="Wycisz muzykę">🎵</button>
+  <button id="mute" type="button" aria-pressed="false" title="Wycisz dźwięki">🔊</button>
+</div>
+<script src="vendor/qrcode.js"></script>
+<script src="i18n.js"></script>
+<script src="music.js"></script>
+<script src="sky.js"></script>
+<script src="fireworks.js"></script>
+<script src="board.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

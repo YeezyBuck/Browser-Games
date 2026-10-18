@@ -4,7 +4,7 @@
 
 ## Po polsku
 
-Zbiór małych gier, w które grasz w przeglądarce, napisanych od zera, **bez zewnętrznych bibliotek** (jedyny dołączony cudzy kod to generator kodów QR, zobacz [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). Gry dla dwóch osób działają w sieci domowej **albo przez internet** dzięki tunelowi Cloudflare, mają czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, dźwięki i muzykę generowane w przeglądarce oraz animacje na canvasie.
+Zbiór małych gier, w które grasz w przeglądarce, napisanych od zera, **bez zewnętrznych bibliotek** (jedyny dołączony cudzy kod to generator kodów QR, zobacz [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). Gry dla dwóch osób działają w sieci domowej **albo przez internet** dzięki tunelowi Cloudflare, mają czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, **samouczek w grze (przycisk ❓ Jak grać)**, dźwięki i muzykę generowane w przeglądarce oraz animacje na canvasie.
 
 | Gra | Opis | Folder | Port | Instrukcja |
 |---|---|---|---|---|
@@ -20,6 +20,10 @@ Zbiór małych gier, w które grasz w przeglądarce, napisanych od zera, **bez z
   <img src="docs/screenshots/warships-fireworks.jpg" width="48%" alt="WarShips: fajerwerki zwycięzcy">
   <img src="docs/screenshots/dots-fireworks.jpg" width="48%" alt="Dots: fajerwerki zwycięzcy">
 </p>
+<p align="center">
+  <img src="docs/screenshots/warships-tutorial.jpg" width="48%" alt="WarShips: samouczek w grze">
+  <img src="docs/screenshots/dots-tutorial.jpg" width="48%" alt="Dots: samouczek w grze">
+</p>
 
 ### Szybki start (Windows)
 1. Zainstaluj **Node.js** 18 lub nowszy (LTS) z <https://nodejs.org>.
@@ -32,7 +36,7 @@ Na innych systemach: `cd WarShips` (albo `cd Dots`), potem `node server.js --tun
 ### Jak to jest zbudowane
 - Serwery to czysty Node.js (bez `npm install`): statyczne pliki, stan na żywo przez SSE z zapasowym long-pollingiem (działa przez tunel), ruchy przez POST. **Serwer jest sędzią**: sprawdza każdy ruch, a przeciwnik nigdy nie dostaje danych, których nie powinien znać.
 - Zabezpieczenia: 6-literowe kody pokoi z limitem prób, limity żądań na adres IP, Content-Security-Policy, czat tylko jako zwykły tekst, wyłączanie serwera tylko z lokalnego komputera z tajnym tokenem. Zobacz [SECURITY.md](SECURITY.md).
-- Każda gra ma testy: `npm test` w jej folderze (WarShips: 68 testów, Dots: 11 testów silnika i 48 testów serwera).
+- Każda gra ma testy: `npm test` w jej folderze (WarShips: 74 testy, Dots: 11 testów silnika i 53 testy serwera, TicTacToe: 7 testów).
 
 ### Ważne
 Gry są przeznaczone do grania ze znajomymi: serwer działa na Twoim komputerze, a tunel Cloudflare „quick” jest tymczasowy i przeznaczony do testów. **Nie są przygotowane do stałego hostowania publicznego** (nie ma kont; każdy, kto zna kod pokoju, może dołączyć jako drugi gracz).
@@ -42,7 +46,7 @@ Gry są przeznaczone do grania ze znajomymi: serwer działa na Twoim komputerze,
 
 ## English
 
-A small collection of games you play in the browser, written from scratch with **no external libraries** (the only bundled third-party code is a QR code generator, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). The two-player games work on your home network **or over the internet** through a Cloudflare tunnel, and have a chat, a QR code for joining from a phone, a Polish and English interface, sounds and music synthesized in the browser, and canvas animations.
+A small collection of games you play in the browser, written from scratch with **no external libraries** (the only bundled third-party code is a QR code generator, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). The two-player games work on your home network **or over the internet** through a Cloudflare tunnel, and have a chat, a QR code for joining from a phone, a Polish and English interface, an **in-game tutorial (the ❓ How to play button)**, sounds and music synthesized in the browser, and canvas animations.
 
 | Game | Description | Folder | Port | Instructions |
 |---|---|---|---|---|
@@ -53,6 +57,10 @@ A small collection of games you play in the browser, written from scratch with *
 <p align="center">
   <img src="docs/screenshots/warships-sunk.jpg" width="48%" alt="WarShips: a ship is sunk">
   <img src="docs/screenshots/warships-share.jpg" width="48%" alt="WarShips: sharing the game link and QR code">
+</p>
+<p align="center">
+  <img src="docs/screenshots/dots-tutorial.jpg" width="48%" alt="Dots: the in-game tutorial">
+  <img src="docs/screenshots/warships-tutorial.jpg" width="48%" alt="WarShips: the in-game tutorial">
 </p>
 
 ### Quick start (Windows)
@@ -66,7 +74,7 @@ On other systems: `cd WarShips` (or `cd Dots`), then `node server.js --tunnel --
 ### How it is built
 - The servers are plain Node.js (no `npm install`): static files, live state over SSE with a long-polling fallback (works through the tunnel), moves over POST. **The server is the referee**: it validates every move, and your opponent never receives data they should not know.
 - Protections: 6-letter room codes with rate limits, per-IP request limits, a Content-Security-Policy, plain-text-only chat, and a shutdown endpoint reachable only from the local machine with a secret token. See [SECURITY.md](SECURITY.md).
-- Every game has tests: `npm test` in its folder (WarShips: 68 tests, Dots: 11 engine tests and 48 server tests).
+- Every game has tests: `npm test` in its folder (WarShips: 74 tests, Dots: 11 engine tests and 53 server tests, TicTacToe: 7 tests).
 
 ### Important
 The games are meant for playing with friends: the server runs on your computer, and the "quick" Cloudflare tunnel is temporary and intended for testing. **They are not hardened for permanent public hosting** (there are no accounts; anyone who knows a room code can join as the second player).

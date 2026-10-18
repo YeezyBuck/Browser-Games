@@ -169,6 +169,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 | Funkcja | Jak |
 |---|---|
 | Zmiana języka | przyciski **Polski / English** u góry; wybór jest zapamiętywany (domyślnie wg języka przeglądarki) |
+| Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, flota, ustawianie, strzelanie, zatopienie, dodatki), po polsku i angielsku; działają strzałki i Esc |
 | Czat | przycisk 💬 w lewym dolnym rogu (po dołączeniu przeciwnika); Enter wysyła, Esc zamyka; czerwona odznaka = nieprzeczytane; do 200 znaków |
 | Muzyka | przycisk 🎵 wycisza/włącza; startuje po pierwszym kliknięciu na stronie (wymóg przeglądarek) |
 | Efekty dźwiękowe (boom, plusk, wybuch przy zatopieniu, sygnał czatu) | przycisk 🔊 |
@@ -253,6 +254,7 @@ WarShips/
     ├── style.css        wygląd
     ├── app.js           logika klienta: ekrany, plansze, czat, transport
     ├── i18n.js          tłumaczenia PL/EN
+    ├── tutorial.js      samouczek w grze: kroki i animacje
     ├── music.js         muzyka generowana w Web Audio
     ├── sea.js           animowane tło (morze, statki piratów)
     ├── blast.js         wybuchy na planszach (trafienia i zatopienia)

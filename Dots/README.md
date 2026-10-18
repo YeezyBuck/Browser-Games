@@ -116,6 +116,7 @@ Good to know: the tunnel address is **temporary** (it changes every time), and t
 | Resigning | **Resign** (with confirmation) |
 | Rematch | **Play again** after the game |
 | Language | **Polski / English** buttons at the top (remembered) |
+| Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, connecting, capturing, locked spots, ending, tips), in Polish and English; arrow keys and Esc work |
 | Chat | 💬 button at the bottom left; Enter sends, Esc closes; up to 200 characters |
 | Music / effects | 🎵 / 🔊 buttons (remembered); sounds: placing a dot, capture, end of game |
 | Copying the link | **Copy** in the waiting panel or **Copy link** at the top |
@@ -173,7 +174,7 @@ cd Dots
 npm test                 # = node engine.test.js && node test.js
 ```
 - `engine.test.js` (11 tests): the game rules: capture by a diamond, a gap in the loop, locking, the board edge, the no-suicide rule and its exception, end of game, and 12 random games checking invariants.
-- `test.js` (48 tests): the server over HTTP: rooms and sizes, moves and validation, capture, end proposals, resigning, draw, rematch, ending by no moves, long-polling, chat, limits, security and shutdown.
+- `test.js` (53 tests): the server over HTTP: rooms and sizes, moves and validation, capture, end proposals, resigning, draw, rematch, ending by no moves, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
 
 ## 11. Project structure (for developers)
 
@@ -191,6 +192,7 @@ Dots/
     ├── app.js             client logic: screens, transport, chat, proposals, game sounds
     ├── board.js           canvas board: drawing, clicks, capture effects
     ├── i18n.js            PL/EN translations
+    ├── tutorial.js        in-game tutorial: steps and animations
     ├── music.js, sky.js   ambient music and the animated sky with constellations
     ├── fireworks.js       winner's fireworks
     └── vendor/qrcode.js   QR code generator (qrcode-generator, MIT, bundled unchanged)

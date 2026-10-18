@@ -14,6 +14,9 @@
 - Night sky with twinkling stars and slowly drifting constellations (static with "reduce motion"). / Nocne niebo z gwiazdami i konstelacjami (statyczne przy „ogranicz ruch”).
 - Calm background music synthesized in the browser (starts after the first click; the 🔊/🔇 button mutes it and the choice is remembered). / Spokojna muzyka generowana w przeglądarce (startuje po pierwszym kliknięciu; przycisk 🔊/🔇 ją wycisza).
 - The board has a fixed size (3 × 100 px). / Plansza ma stałą wielkość.
+- **❓ How to play** tutorial with short animations (opens on your first visit). / Samouczek **❓ Jak grać** z krótkimi animacjami (otwiera się przy pierwszej wizycie).
+- **Polski / English** switch for the whole interface, remembered in the browser. / Przełącznik **Polski / English** dla całego interfejsu, zapamiętywany w przeglądarce.
+- Tests: `node test.js` (translations, tutorial, and a check that the hard level never loses). / Testy: `node test.js`.
 
 ## License / Licencja
 

@@ -171,6 +171,7 @@ After installing, open a new terminal window. (The server also checks the typica
 | Feature | How |
 |---|---|
 | Language | **Polski / English** buttons at the top; the choice is remembered (default follows the browser language) |
+| Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, fleet, placing, firing, sinking, extras), in Polish and English; arrow keys and Esc work |
 | Chat | 💬 button at the bottom left (after the opponent joins); Enter sends, Esc closes; red badge = unread; up to 200 characters |
 | Music | 🎵 button mutes/unmutes; starts after the first click on the page (browser requirement) |
 | Sound effects (boom, splash, ship-sunk explosion, chat beep) | 🔊 button |
@@ -255,6 +256,7 @@ WarShips/
     ├── style.css        styling
     ├── app.js           client logic: screens, boards, chat, transport
     ├── i18n.js          PL/EN translations
+    ├── tutorial.js      in-game tutorial: steps and animations
     ├── music.js         music generated with Web Audio
     ├── sea.js           animated background (sea, pirate ships)
     ├── blast.js         explosions on the boards (hits and sinking)

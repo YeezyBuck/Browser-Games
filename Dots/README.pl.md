@@ -116,6 +116,7 @@ Dobrze wiedzieć: adres tunelu jest **tymczasowy** (zmienia się przy każdym ur
 | Poddanie się | **Poddaj się** (z potwierdzeniem) |
 | Rewanż | **Zagraj ponownie** po końcu gry |
 | Zmiana języka | przyciski **Polski / English** u góry (zapamiętywane) |
+| Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, łączenie, przejmowanie, pola zablokowane, koniec gry, wskazówki), po polsku i angielsku; działają strzałki i Esc |
 | Czat | przycisk 💬 w lewym dolnym rogu; Enter wysyła, Esc zamyka; do 200 znaków |
 | Muzyka / efekty | przyciski 🎵 / 🔊 (zapamiętywane); dźwięki: postawienie kropki, przejęcie, koniec gry |
 | Kopiowanie linku | **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
@@ -173,7 +174,7 @@ cd Dots
 npm test                 # = node engine.test.js && node test.js
 ```
 - `engine.test.js` (11 testów): reguły gry: przejęcie rombem, luka w pętli, blokowanie obszaru, brzeg planszy, zakaz samobójstwa i jego wyjątek, koniec gry oraz 12 losowych partii ze sprawdzaniem niezmienników.
-- `test.js` (48 testów): serwer przez HTTP: pokoje i rozmiary, ruchy i walidacja, przejęcie, propozycje zakończenia, poddanie, remis, rewanż, koniec przez brak ruchów, long-polling, czat, limity, zabezpieczenia i zamykanie.
+- `test.js` (53 testy): serwer przez HTTP: pokoje i rozmiary, ruchy i walidacja, przejęcie, propozycje zakończenia, poddanie, remis, rewanż, koniec przez brak ruchów, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
 
 ## 11. Budowa projektu (dla programistów)
 
@@ -191,6 +192,7 @@ Dots/
     ├── app.js             logika klienta: ekrany, transport, czat, oferty, dźwięki gry
     ├── board.js           plansza na canvasie: rysowanie, kliknięcia, efekty przejęć
     ├── i18n.js            tłumaczenia PL/EN
+    ├── tutorial.js        samouczek w grze: kroki i animacje
     ├── music.js, sky.js   muzyka ambient i animowane niebo z konstelacjami
     ├── fireworks.js       fajerwerki zwycięzcy
     └── vendor/qrcode.js   generator kodów QR (qrcode-generator, MIT, bez zmian)

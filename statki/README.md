@@ -2,7 +2,7 @@
 
 🇵🇱 [Wersja polska](README.pl.md)
 
-The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, a QR code for joining from a phone, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit) and *splash* (miss).
+The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, a QR code for joining from a phone, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit), *splash* (miss) and a heavy multi-part explosion when a ship is sunk.
 
 No libraries to install: all you need is **Node.js**. The server acts as the referee and never sends your opponent the positions of your ships.
 
@@ -105,7 +105,7 @@ Fleet: **1 × four-cell ship, 2 × three-cell, 3 × two-cell, 4 × one-cell.** S
 
 ### Playing
 - You have **two boards**: *Your board* (your ships and your opponent's shots) and *Opponent's board* (where you fire).
-- On **your turn**, click a cell on the opponent's board. You hear **boom** for a hit or **splash** for a miss.
+- On **your turn**, click a cell on the opponent's board. You hear **boom** for a hit, **splash** for a miss, and a much bigger, longer **explosion** (double blast, rumble, creaking hull, bubbles) when a ship is **sunk**.
 - **Each player fires one shot, then it is the opponent's turn** (also after a hit).
 - Markers: ✕ hit, dot miss. Cells around a sunk ship are marked as water automatically.
 - The "Opponent's ships: X/10" counter shows how many they have left.
@@ -168,7 +168,7 @@ After installing, open a new terminal window. (The server also checks the typica
 | Language | **Polski / English** buttons at the top; the choice is remembered (default follows the browser language) |
 | Chat | 💬 button at the bottom left (after the opponent joins); Enter sends, Esc closes; red badge = unread; up to 200 characters |
 | Music | 🎵 button mutes/unmutes; starts after the first click on the page (browser requirement) |
-| Sound effects (boom, splash, chat beep) | 🔊 button |
+| Sound effects (boom, splash, ship-sunk explosion, chat beep) | 🔊 button |
 | Rotating a ship | **Rotate** button or the **R** key |
 | Quitting the game | **⏻ Quit game** button at the top; it shuts down the server and the tunnel (visible only in the browser on the computer running the server) |
 | Copying the link | **Copy** button in the waiting panel or **Copy link** at the top |
@@ -179,7 +179,7 @@ The language and mute choices are remembered in the browser. The background anim
 
 ## 8. Stopping the server
 
-- **Easiest:** click **⏻ Quit game** at the top of the game page (on the computer where the server runs) and confirm. The server and tunnel shut down, the console window closes, and your opponent sees the message "The game has been closed". The button is deliberately **not** available to your opponent or through the tunnel.
+- **Easiest:** click **⏻ Quit game** at the top of the game page (on the computer where the server runs) and confirm. The server and tunnel shut down, the console window closes, the browser tab closes itself too, and your opponent sees the message "The game has been closed". (Browsers only allow a page to close its own tab in some cases: Chrome, Edge and Brave usually do when the game was opened by the `.bat` file; Firefox and Safari usually do not, and then the page asks you to close the tab manually.) The button is deliberately **not** available to your opponent or through the tunnel.
 - Alternatively, in the console window press **Ctrl+C** (or close the window).
 - Stopping the server **ends all games in progress** (rooms are kept in memory only), and the tunnel closes with it.
 
@@ -198,6 +198,7 @@ The language and mute choices are remembered in the browser. The background anim
 | Opponent's moves appear about 3 s late right after joining via the tunnel | Normal: it is switching to the fallback transport. Later updates are instant. |
 | "Too many requests" | A safety limit kicked in (e.g. many join attempts). Wait a minute. |
 | The page looks old after an update | Refresh without cache: **Ctrl+F5**. |
+| The tab did not close after "Quit game" | The browser blocked it (it only lets a page close tabs that were opened by script or have no navigation history). The page says so; close the tab manually. |
 | The browser did not open by itself | Open `http://localhost:3000` manually. Automatic opening works only when started with a `.bat` file or with the `--open` flag. |
 | No **⏻ Quit game** button | It is shown only in the browser on the computer running the server, opened via `localhost`/`127.0.0.1`. Use Ctrl+C in the console instead. |
 | The install question did not appear | The server is not running in an interactive console (e.g. it was started in the background). Start `uruchom.bat`, or use the `--yes` flag. |

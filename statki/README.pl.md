@@ -2,7 +2,7 @@
 
 🇬🇧 [English version](README.md)
 
-Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie) i *plusk* (pudło).
+Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie), *plusk* (pudło) i potężny, wieloczęściowy wybuch przy zatopieniu statku.
 
 Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i nigdy nie wysyła przeciwnikowi pozycji Twoich statków.
 
@@ -104,7 +104,7 @@ Flota: **1 × czteromasztowiec, 2 × trójmasztowce, 3 × dwumasztowce, 4 × jed
 
 ### Rozgrywka
 - Masz **dwie plansze**: *Twoja plansza* (Twoje statki i strzały przeciwnika) oraz *Plansza przeciwnika* (tu strzelasz).
-- Gdy jest **Twoja kolej**, kliknij pole na planszy przeciwnika. Słychać **boom** przy trafieniu lub **plusk** przy pudle.
+- Gdy jest **Twoja kolej**, kliknij pole na planszy przeciwnika. Słychać **boom** przy trafieniu, **plusk** przy pudle oraz dużo mocniejszy i dłuższy **wybuch** (podwójny huk, dudnienie, skrzypiący kadłub, bąbelki) przy **zatopieniu** statku.
 - **Każdy gracz oddaje jeden strzał, potem kolej przeciwnika** (także po trafieniu).
 - Znaczniki: ✕ trafienie, kropka pudło. Wokół zatopionego statku pola zaznaczają się same jako woda.
 - Licznik „Statki przeciwnika: X/10” pokazuje, ile mu zostało.
@@ -166,7 +166,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 | Zmiana języka | przyciski **Polski / English** u góry; wybór jest zapamiętywany (domyślnie wg języka przeglądarki) |
 | Czat | przycisk 💬 w lewym dolnym rogu (po dołączeniu przeciwnika); Enter wysyła, Esc zamyka; czerwona odznaka = nieprzeczytane; do 200 znaków |
 | Muzyka | przycisk 🎵 wycisza/włącza; startuje po pierwszym kliknięciu na stronie (wymóg przeglądarek) |
-| Efekty dźwiękowe (boom, plusk, sygnał czatu) | przycisk 🔊 |
+| Efekty dźwiękowe (boom, plusk, wybuch przy zatopieniu, sygnał czatu) | przycisk 🔊 |
 | Obrót statku | przycisk **Obróć** albo klawisz **R** |
 | Zamknięcie gry | przycisk **⏻ Zamknij grę** u góry: wyłącza serwer i tunel (widoczny tylko w przeglądarce na komputerze z serwerem) |
 | Kopiowanie linku | przycisk **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
@@ -177,7 +177,7 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 
 ## 8. Zatrzymanie serwera
 
-- **Najłatwiej:** kliknij **⏻ Zamknij grę** u góry strony gry (na komputerze, na którym działa serwer) i potwierdź. Serwer i tunel się wyłączą, okno konsoli zamknie się samo, a przeciwnik zobaczy komunikat „Gra została zamknięta”. Przycisk celowo **nie** jest dostępny dla przeciwnika ani przez tunel.
+- **Najłatwiej:** kliknij **⏻ Zamknij grę** u góry strony gry (na komputerze, na którym działa serwer) i potwierdź. Serwer i tunel się wyłączą, okno konsoli zamknie się samo, karta przeglądarki też zamknie się sama, a przeciwnik zobaczy komunikat „Gra została zamknięta”. (Przeglądarki pozwalają stronie zamknąć własną kartę tylko w niektórych sytuacjach: Chrome, Edge i Brave zwykle tak, gdy grę otworzył plik `.bat`; Firefox i Safari zwykle nie, i wtedy strona prosi o ręczne zamknięcie karty.) Przycisk celowo **nie** jest dostępny dla przeciwnika ani przez tunel.
 - Alternatywnie w oknie konsoli naciśnij **Ctrl+C** (albo zamknij okno).
 - Zatrzymanie serwera **kończy wszystkie trwające gry** (pokoje są tylko w pamięci), a tunel zamyka się razem z nim.
 
@@ -196,6 +196,7 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 | Ruchy przeciwnika pojawiają się z opóźnieniem ok. 3 s po wejściu przez tunel | To normalne: przełączenie na zapasowy transport. Dalsze aktualizacje są od razu. |
 | „Zbyt wiele żądań” | Zadziałał limit zabezpieczeń (np. dużo prób dołączenia). Odczekaj minutę. |
 | Strona wygląda po staremu po aktualizacji | Odśwież bez pamięci podręcznej: **Ctrl+F5**. |
+| Karta nie zamknęła się po „Zamknij grę” | Przeglądarka to zablokowała (pozwala zamykać tylko karty otwarte skryptem lub bez historii nawigacji). Strona o tym informuje; zamknij kartę ręcznie. |
 | Przeglądarka nie otworzyła się sama | Otwórz ręcznie `http://localhost:3000`. Automatyczne otwieranie działa tylko przy starcie z pliku `.bat` lub z flagą `--open`. |
 | Nie ma przycisku **⏻ Zamknij grę** | Jest widoczny tylko w przeglądarce na komputerze z serwerem, otwartej przez `localhost`/`127.0.0.1`. Użyj wtedy Ctrl+C w konsoli. |
 | Nie pojawiło się pytanie o instalację | Serwer nie działa w interaktywnej konsoli (np. uruchomiono go w tle). Uruchom `uruchom.bat` albo użyj flagi `--yes`. |

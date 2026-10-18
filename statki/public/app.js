@@ -73,12 +73,44 @@ function boom() {
   const src = ac.createBufferSource(); src.buffer = noiseBuffer(1.3, 2);
   const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
   lp.frequency.setValueAtTime(1400, t); lp.frequency.exponentialRampToValueAtTime(70, t + 1.1);
-  const g = ac.createGain(); g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.25);
+  const g = ac.createGain(); g.gain.setValueAtTime(0.66, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.25);
   src.connect(lp); lp.connect(g); g.connect(ac.destination); src.start(t);
   const o = ac.createOscillator(), og = ac.createGain(); o.type = 'sine';
   o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(35, t + 0.6);
-  og.gain.setValueAtTime(0.9, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+  og.gain.setValueAtTime(0.66, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
   o.connect(og); og.connect(ac.destination); o.start(t); o.stop(t + 0.75);
+}
+// Zatopienie statku: dużo mocniejszy i dłuższy wybuch niż zwykłe trafienie (podwójny huk, dudnienie,
+// skrzypienie tonącego kadłuba i bąbelki). Wszystko przez jeden głośnik z ograniczonym poziomem, żeby nie trzeszczało.
+function boomSunk() {
+  if (muted || !audio()) return;
+  const t = ac.currentTime;
+  const out = ac.createGain(); out.gain.value = 0.55; out.connect(ac.destination);
+  const burst = (t0, vol, dur) => {
+    const src = ac.createBufferSource(); src.buffer = noiseBuffer(dur, 2);
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(1800, t0); lp.frequency.exponentialRampToValueAtTime(60, t0 + dur * 0.9);
+    const g = ac.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(lp); lp.connect(g); g.connect(out); src.start(t0);
+  };
+  burst(t, 1.0, 1.7);                      // pierwszy wybuch
+  burst(t + 0.3, 0.8, 1.5);                // wtórny wybuch (magazyn z amunicją)
+  const rumble = ac.createOscillator(), rg = ac.createGain(); rumble.type = 'sine';
+  rumble.frequency.setValueAtTime(110, t); rumble.frequency.exponentialRampToValueAtTime(26, t + 1.7);
+  rg.gain.setValueAtTime(1.0, t); rg.gain.exponentialRampToValueAtTime(0.001, t + 1.9);
+  rumble.connect(rg); rg.connect(out); rumble.start(t); rumble.stop(t + 2.0);
+  const creak = ac.createOscillator(), cg = ac.createGain(), cf = ac.createBiquadFilter();    // kadłub idzie na dno
+  creak.type = 'sawtooth'; cf.type = 'lowpass'; cf.frequency.value = 700;
+  creak.frequency.setValueAtTime(260, t + 0.4); creak.frequency.exponentialRampToValueAtTime(55, t + 2.3);
+  cg.gain.setValueAtTime(0.0001, t + 0.4); cg.gain.linearRampToValueAtTime(0.18, t + 0.75); cg.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+  creak.connect(cf); cf.connect(cg); cg.connect(out); creak.start(t + 0.4); creak.stop(t + 2.5);
+  for (let i = 0; i < 7; i++) {            // bąbelki powietrza
+    const b = t + 1.0 + i * 0.15 + Math.random() * 0.08, f = 300 + Math.random() * 500;
+    const bo = ac.createOscillator(), bg = ac.createGain(); bo.type = 'sine';
+    bo.frequency.setValueAtTime(f, b); bo.frequency.exponentialRampToValueAtTime(f * 2, b + 0.08);
+    bg.gain.setValueAtTime(0.0001, b); bg.gain.linearRampToValueAtTime(0.14, b + 0.01); bg.gain.exponentialRampToValueAtTime(0.0001, b + 0.12);
+    bo.connect(bg); bg.connect(out); bo.start(b); bo.stop(b + 0.15);
+  }
 }
 function plusk() {
   if (muted || !audio()) return;
@@ -433,8 +465,20 @@ $('#quitBtn').addEventListener('click', async () => {
     const r = await fetch('/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': info.adminToken }, body: '{}' });
     if (!r.ok) throw Object.assign(new Error(''), { code: 'forbidden' });
     showClosed();
+    closeTabSoon();
   } catch (e) { toast(errorText(e)); }
 });
+
+// Po zamknięciu serwera próbujemy zamknąć też kartę. Przeglądarki zwykle pozwalają na to tylko dla kart otwartych
+// przez skrypt albo bez historii nawigacji (np. otwartych z pliku .bat w Chrome/Edge/Brave); gdy zablokują, zostaje komunikat.
+function closeTabSoon() {
+  const note = $('#closedAuto');
+  note.hidden = false; note.dataset.i18n = 'closed.auto'; applyStatic();
+  setTimeout(() => {
+    window.close();
+    setTimeout(() => { note.dataset.i18n = 'closed.manual'; applyStatic(); }, 700);    // jeśli kod nadal działa, karta się nie zamknęła
+  }, 1500);
+}
 function roomUrl(base) { return base.replace(/\/$/, '') + '/?room=' + session.code; }
 // Najlepszy link do skopiowania: internet (tunel) jeśli jest, w przeciwnym razie adres, pod którym działa strona.
 function roomLink() { return roomUrl(info && info.publicUrl ? info.publicUrl : location.origin); }
@@ -547,7 +591,7 @@ function onState(s) {
   if (lastSeq === null) lastSeq = seq;                              // pierwszy stan po wejściu – bez dźwięku
   else if (seq > lastSeq) {
     lastSeq = seq;
-    if (s.last.result === 'miss') plusk(); else boom();
+    if (s.last.result === 'miss') plusk(); else if (s.last.result === 'sunk') boomSunk(); else boom();
     if (s.last.by === s.you && s.last.result === 'sunk') toast(t('toast.sunk'));
   }
   render();

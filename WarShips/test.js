@@ -293,6 +293,27 @@ async function main() {
   const t2 = Date.now(); assert.strictEqual(await waitForTunnel(500), false); assert.ok(Date.now() - t2 >= 450 && Date.now() - t2 < 1500); ok('start: limit czasu czekania na tunel działa');
   tunnel.status = 'on';
 
+  // ---------- tłumaczenia i samouczek ----------
+  const vm = require('vm'), fs = require('fs'), path = require('path');
+  const sandbox = { navigator: { language: 'pl' }, localStorage: { getItem: () => null, setItem() {} }, document: { documentElement: {}, querySelectorAll: () => [] } };
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(path.join(__dirname, 'public', 'i18n.js'), 'utf8') + ';this.I18N = I18N;', sandbox);
+  const { pl, en } = sandbox.I18N;
+  assert.deepStrictEqual([Object.keys(pl).filter(k => !(k in en)), Object.keys(en).filter(k => !(k in pl))], [[], []]); ok('tłumaczenia: te same klucze po polsku i angielsku');
+  const tutSrc = fs.readFileSync(path.join(__dirname, 'public', 'tutorial.js'), 'utf8');
+  const tutIds = [...tutSrc.matchAll(/\{ id: '(\w+)', scene:/g)].map(m => m[1]);
+  assert.ok(tutIds.length >= 5, 'za mało kroków samouczka');
+  for (const id of tutIds) for (const part of ['title', 'text']) for (const L of [pl, en]) assert.ok(typeof L[`tut.${id}.${part}`] === 'string' && L[`tut.${id}.${part}`].length > (part === 'title' ? 2 : 10), `brak tut.${id}.${part}`);
+  for (const k of ['tut.btn', 'tut.btnTitle', 'tut.step', 'tut.goto', 'tut.prev', 'tut.next', 'tut.done', 'tut.close']) assert.ok(pl[k] && en[k], 'brak ' + k);
+  assert.strictEqual(pl['tut.step'](2, 6), 'Krok 2 z 6'); assert.strictEqual(en['tut.step'](2, 6), 'Step 2 of 6');
+  ok(`samouczek: ${tutIds.length} kroków ma tytuły i teksty po polsku i angielsku`);
+  for (const L of [pl, en]) for (const k of Object.keys(L)) if (/^tut\..+\.text$/.test(k)) assert.ok(!/<[a-z]/i.test(L[k]), 'HTML w tekście samouczka: ' + k);
+  ok('samouczek: teksty bez znaczników HTML (wstawiane jako zwykły tekst)');
+  const pageHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+  assert.ok(pageHtml.includes('id="tutorial"') && pageHtml.includes('id="tutBtn"') && pageHtml.indexOf('tutorial.js') > 0 && pageHtml.indexOf('tutorial.js') < pageHtml.indexOf('app.js'));
+  ok('index.html: okno i przycisk samouczka, tutorial.js ładowany przed app.js');
+  assert.strictEqual((await fetch(base + '/tutorial.js')).status, 200); ok('tutorial.js jest serwowany z własnego serwera (zgodnie z CSP)');
+
   // ---------- zamykanie gry (przycisk "Zamknij grę") ----------
   const infoLocal = await (await fetch(base + '/api/info')).json();
   assert.ok(/^[0-9a-f]{32}$/.test(infoLocal.adminToken)); ok('/api/info: lokalna przeglądarka dostaje token administratora');

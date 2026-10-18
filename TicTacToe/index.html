@@ -61,35 +61,369 @@
   }
 
   button:hover { background: var(--hover); }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  .lang { display: flex; gap: 4px; }
+  .lang button { padding: 6px 10px; font-size: .9rem; }
+  .lang button.active { background: var(--o); border-color: var(--o); color: #fff; }
   button.primary { background: var(--o); border-color: var(--o); color: #fff; }
   button.primary:hover { filter: brightness(1.08); }
+
+/* Samouczek */
+.tut { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 14px; background: rgba(5, 8, 25, 0.74); backdrop-filter: blur(4px); }
+.tut[hidden] { display: none; }
+.tut-card { width: 100%; max-width: 560px; max-height: 94vh; overflow: auto; padding: 18px 20px; border-radius: 14px; background: rgba(14, 18, 44, 0.97); border: 1px solid var(--line); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55); color: var(--text); }
+.tut-card h2 { margin: 4px 0 6px; font-size: 1.25rem; text-align: center; }
+.tut-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: .85rem; }
+.tut-x { padding: 2px 9px; border-radius: 6px; }
+#tutCanvas { display: block; margin: 8px auto; width: 320px; max-width: 100%; height: auto; border-radius: 12px; background: rgba(8, 12, 34, 0.7); border: 1px solid var(--line); }
+#tutCanvas[hidden] { display: none; }
+.tut-text { color: var(--muted); line-height: 1.5; font-size: .98rem; }
+.tut-text p { margin: 0 0 8px; }
+.tut-text ul { margin: 4px 0 8px; padding-left: 20px; }
+.tut-text li { margin-bottom: 4px; }
+.tut-text strong { color: var(--text); }
+.tut-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.tut-dots { display: flex; gap: 6px; }
+.tut-dot { width: 12px; height: 12px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.12); }
+.tut-dot.active { background: #fff; transform: scale(1.2); }
+.tut-nav { display: flex; gap: 8px; }
+#tutBtn { white-space: nowrap; }
 </style>
 </head>
 <body>
 <canvas id="sky" aria-hidden="true"></canvas>
+<div id="tutorial" class="tut" hidden role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+  <div class="tut-card">
+    <div class="tut-head"><span id="tutStep" class="tut-step"></span><button id="tutClose" type="button" class="tut-x" aria-label="Zamknij samouczek" data-i18n-aria="tut.close">✕</button></div>
+    <h2 id="tutTitle"></h2>
+    <canvas id="tutCanvas" width="320" height="220" aria-hidden="true"></canvas>
+    <div id="tutText" class="tut-text"></div>
+    <div class="tut-foot">
+      <div id="tutDots" class="tut-dots"></div>
+      <div class="tut-nav"><button id="tutPrev" type="button" data-i18n="tut.prev">Wstecz</button><button id="tutNext" class="primary" type="button" data-i18n="tut.next">Dalej</button></div>
+    </div>
+  </div>
+</div>
 <button id="mute" type="button" aria-pressed="false" title="Wycisz muzykę">🔊</button>
 <header>
   <div class="score" aria-live="polite">
-    <div><span>Rozegrane gry</span><strong id="games">0</strong></div>
-    <div class="x"><span>Ty (X)</span><strong id="winsPlayer">0</strong></div>
-    <div><span>Remisy</span><strong id="draws">0</strong></div>
-    <div class="o"><span>Komputer (O)</span><strong id="winsComputer">0</strong></div>
+    <div><span data-i18n="score.games">Rozegrane gry</span><strong id="games">0</strong></div>
+    <div class="x"><span data-i18n="score.you">Ty (X)</span><strong id="winsPlayer">0</strong></div>
+    <div><span data-i18n="score.draws">Remisy</span><strong id="draws">0</strong></div>
+    <div class="o"><span data-i18n="score.comp">Komputer (O)</span><strong id="winsComputer">0</strong></div>
   </div>
 </header>
 <main>
+  <div class="toolbar">
+    <button id="tutBtn" type="button" data-i18n="tut.btn" data-i18n-title="tut.btnTitle" title="Pokaż zasady i samouczek">❓ Jak grać</button>
+    <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Język">
+      <button type="button" data-lang="pl" aria-pressed="true">🇵🇱 Polski</button>
+      <button type="button" data-lang="en" aria-pressed="false">🇬🇧 English</button>
+    </div>
+  </div>
   <div id="status"></div>
-  <div id="board" role="grid" aria-label="Plansza"></div>
+  <div id="board" role="grid" aria-label="Plansza" data-i18n-aria="board.aria"></div>
   <div class="controls">
-    <button class="primary" id="newGame">Nowa gra</button>
-    <label>Poziom:
+    <button class="primary" id="newGame" data-i18n="btn.new">Nowa gra</button>
+    <label><span data-i18n="level">Poziom:</span>
       <select id="level">
-        <option value="easy">Łatwy</option>
-        <option value="hard" selected>Trudny</option>
+        <option value="easy" data-i18n="level.easy">Łatwy</option>
+        <option value="hard" selected data-i18n="level.hard">Trudny</option>
       </select>
     </label>
-    <button id="resetScore">Wyzeruj wynik</button>
+    <button id="resetScore" data-i18n="btn.reset">Wyzeruj wynik</button>
   </div>
 </main>
+<script>
+// Tłumaczenia interfejsu (polski / angielski), wybór języka jest zapamiętywany w przeglądarce.
+const I18N = {
+  pl: {
+    "title": "Kółko i krzyżyk",
+    "lang.label": "Język",
+    "score.games": "Rozegrane gry",
+    "score.you": "Ty (X)",
+    "score.draws": "Remisy",
+    "score.comp": "Komputer (O)",
+    "btn.new": "Nowa gra",
+    "level": "Poziom:",
+    "level.easy": "Łatwy",
+    "level.hard": "Trudny",
+    "btn.reset": "Wyzeruj wynik",
+    "status.yourTurn": "Twój ruch (X)",
+    "status.thinking": "Ruch komputera…",
+    "status.compStarts": "Komputer zaczyna…",
+    "status.win": "Wygrałeś! 🎉",
+    "status.lose": "Komputer wygrał.",
+    "status.draw": "Remis.",
+    "board.aria": "Plansza",
+    "music.on": "Wycisz muzykę",
+    "music.off": "Włącz muzykę",
+    'cell': (i, v) => `Pole ${i}${v ? ': ' + v : ''}`,
+    'tut.btn': "❓ Jak grać",
+    'tut.btnTitle': "Pokaż zasady i samouczek",
+    'tut.step': (n, m) => `Krok ${n} z ${m}`,
+    'tut.goto': n => `Przejdź do kroku ${n}`,
+    'tut.prev': "Wstecz",
+    'tut.next': "Dalej",
+    'tut.done': "Zaczynamy!",
+    'tut.close': "Zamknij samouczek",
+    'tut.goal.title': "Cel gry",
+    'tut.goal.text': "Grasz **krzyżykami (X)** przeciwko komputerowi, który gra kółkami (O). Na zmianę stawiacie znaki na planszy 3×3.\n**Wygrywa ten, kto pierwszy ułoży trzy swoje znaki w jednej linii**: poziomo, pionowo albo po przekątnej. Jeśli plansza się zapełni, a nikt nie wygrał, jest remis.",
+    'tut.play.title': "Jak grać",
+    'tut.play.text': "• Kliknij puste pole, żeby postawić X. Potem ruch ma komputer.\n• Kto zaczyna, zmienia się co grę.\n• **Poziom łatwy**: komputer często gra losowo, więc da się wygrać. **Poziom trudny**: komputer gra bezbłędnie, więc najlepszy możliwy wynik to remis.\n• U góry widzisz licznik gier i wynik (zapamiętywany w przeglądarce); **Wyzeruj wynik** zeruje go.\n• Przycisk 🔊 wycisza muzykę. Samouczek otworzysz zawsze przyciskiem ❓.",
+  },
+  en: {
+    "title": "Tic-tac-toe",
+    "lang.label": "Language",
+    "score.games": "Games played",
+    "score.you": "You (X)",
+    "score.draws": "Draws",
+    "score.comp": "Computer (O)",
+    "btn.new": "New game",
+    "level": "Level:",
+    "level.easy": "Easy",
+    "level.hard": "Hard",
+    "btn.reset": "Reset score",
+    "status.yourTurn": "Your move (X)",
+    "status.thinking": "Computer is thinking…",
+    "status.compStarts": "The computer starts…",
+    "status.win": "You win! 🎉",
+    "status.lose": "The computer wins.",
+    "status.draw": "Draw.",
+    "board.aria": "Board",
+    "music.on": "Mute music",
+    "music.off": "Unmute music",
+    'cell': (i, v) => `Cell ${i}${v ? ': ' + v : ''}`,
+    'tut.btn': "❓ How to play",
+    'tut.btnTitle': "Show the rules and the tutorial",
+    'tut.step': (n, m) => `Step ${n} of ${m}`,
+    'tut.goto': n => `Go to step ${n}`,
+    'tut.prev': "Back",
+    'tut.next': "Next",
+    'tut.done': "Let's play!",
+    'tut.close': "Close the tutorial",
+    'tut.goal.title': "The goal",
+    'tut.goal.text': "You play **crosses (X)** against the computer, which plays noughts (O). You take turns placing marks on a 3×3 board.\n**Whoever first gets three of their marks in a line wins**: horizontally, vertically or diagonally. If the board fills up and nobody has won, it is a draw.",
+    'tut.play.title': "How to play",
+    'tut.play.text': "• Click an empty cell to place an X. Then the computer moves.\n• Who starts alternates every game.\n• **Easy level**: the computer often plays randomly, so you can win. **Hard level**: the computer plays perfectly, so the best possible result is a draw.\n• At the top you see the games played and the score (remembered in the browser); **Reset score** clears it.\n• The 🔊 button mutes the music. You can always reopen the tutorial with the ❓ button.",
+  },
+};
+let lang = (() => {
+  try { const v = localStorage.getItem('kik-lang'); if (v === 'pl' || v === 'en') return v; } catch (e) {}
+  return (navigator.language || 'pl').toLowerCase().startsWith('pl') ? 'pl' : 'en';
+})();
+function t(key, ...args) {
+  const v = (I18N[lang] && I18N[lang][key]) ?? I18N.pl[key] ?? key;
+  return typeof v === 'function' ? v(...args) : v;
+}
+function applyStatic() {
+  document.documentElement.lang = lang;
+  document.title = t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+  document.querySelectorAll('.lang button').forEach(b => {
+    const on = b.dataset.lang === lang;
+    b.classList.toggle('active', on); b.setAttribute('aria-pressed', String(on));
+  });
+  const mute = document.getElementById('mute');
+  if (mute) mute.title = t(mute.getAttribute('aria-pressed') === 'true' ? 'music.off' : 'music.on');
+}
+function setLang(l) {
+  if (l !== 'pl' && l !== 'en') return;
+  lang = l;
+  try { localStorage.setItem('kik-lang', l); } catch (e) {}
+  applyStatic();
+  if (typeof onLangChange === 'function') onLangChange();
+}
+</script>
+<script>
+// Samouczek: okno z krokami (tekst + krótka animacja na canvasie), otwierane przyciskiem "Jak grać" oraz automatycznie
+// przy pierwszej wizycie. Teksty pochodzą z i18n (klucze tut.<id>.title i tut.<id>.text), więc działa po polsku i angielsku.
+// Nawigacja: przyciski, kropki kroków, strzałki lewo/prawo, Esc zamyka.
+const Tutorial = (function () {
+  const SEEN_KEY = 'kik-tutorial-seen';
+  const W = 320, H = 220;
+  const root = document.getElementById('tutorial');
+  const els = {
+    title: document.getElementById('tutTitle'), step: document.getElementById('tutStep'), text: document.getElementById('tutText'),
+    canvas: document.getElementById('tutCanvas'), dots: document.getElementById('tutDots'),
+    prev: document.getElementById('tutPrev'), next: document.getElementById('tutNext'), close: document.getElementById('tutClose'),
+  };
+  const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const ease = k => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
+  let idx = 0, raf = 0, opener = null;
+
+    // ---------- strony i animacje (Kółko i krzyżyk) ----------
+  const C = { x: '#ff7eb3', o: '#7cc4ff', line: 'rgba(160,175,255,0.35)', cell: 'rgba(20,26,60,0.85)', win: '#ffd66b', ink: '#eef1ff' };
+  function rr(ctx, x, y, w, h, r, fill) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); fill ? ctx.fill() : ctx.stroke();
+  }
+  function mark(ctx, ch, cx, cy, s, k, color) {                  // znak rysowany stopniowo (k: 0..1)
+    ctx.strokeStyle = color || (ch === 'X' ? C.x : C.o); ctx.lineWidth = 6; ctx.lineCap = 'round';
+    if (ch === 'X') {
+      const d = s * 0.28, a = clamp(k * 2, 0, 1), b = clamp(k * 2 - 1, 0, 1);
+      ctx.beginPath(); ctx.moveTo(cx - d, cy - d); ctx.lineTo(cx - d + 2 * d * a, cy - d + 2 * d * a); ctx.stroke();
+      if (b > 0) { ctx.beginPath(); ctx.moveTo(cx + d, cy - d); ctx.lineTo(cx + d - 2 * d * b, cy - d + 2 * d * b); ctx.stroke(); }
+    } else { ctx.beginPath(); ctx.arc(cx, cy, s * 0.3, -1.57, -1.57 + 6.283 * k); ctx.stroke(); }
+  }
+  // Mini-plansza 3x3 z zadanymi ruchami, linią zwycięstwa i opcjonalną nakładką.
+  function tttScene(spec) {
+    return (ctx, t, w, h) => {
+      const c = 58, ox = (w - 3 * c) / 2, oy = (h - 3 * c) / 2;
+      for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) {
+        ctx.fillStyle = C.cell; rr(ctx, ox + x * c + 2, oy + y * c + 2, c - 4, c - 4, 8, true);
+        ctx.strokeStyle = C.line; ctx.lineWidth = 1.2; rr(ctx, ox + x * c + 2, oy + y * c + 2, c - 4, c - 4, 8, false);
+      }
+      const win = spec.win && t >= spec.win.at ? spec.win : null;
+      spec.moves.filter(m => t >= m.at).forEach(m => {
+        const k = clamp((t - m.at) / 380, 0, 1), onLine = win && win.cells.some(([x, y]) => x === m.x && y === m.y);
+        mark(ctx, m.ch, ox + m.x * c + c / 2, oy + m.y * c + c / 2, c, k, onLine ? C.win : null);
+      });
+      if (win) {
+        const k = ease((t - win.at) / 600), [x1, y1] = win.cells[0], [x2, y2] = win.cells[2];
+        const ax = ox + x1 * c + c / 2, ay = oy + y1 * c + c / 2, bx = ox + x2 * c + c / 2, by = oy + y2 * c + c / 2;
+        ctx.strokeStyle = C.win; ctx.lineWidth = 5; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + (bx - ax) * k, ay + (by - ay) * k); ctx.stroke(); ctx.globalAlpha = 1;
+      }
+      if (spec.after) spec.after(ctx, t, ox, oy, c);
+    };
+  }
+  const M = (at, ch, x, y) => ({ at, ch, x, y });
+  const SC_GOAL = tttScene({
+    moves: [M(400, 'X', 0, 0), M(1300, 'O', 1, 1), M(2200, 'X', 1, 0), M(3100, 'O', 2, 2), M(4000, 'X', 2, 0)],
+    win: { at: 4700, cells: [[0, 0], [1, 0], [2, 0]] },
+  });
+  const SC_PLAY = tttScene({
+    moves: [M(0, 'X', 0, 0), M(0, 'O', 1, 1), M(2800, 'X', 2, 0), M(3900, 'O', 0, 2)],
+    after(ctx, t, ox, oy, c) {
+      if (t < 2800) {                                                                                       // podgląd: kursor krąży nad pustymi polami
+        const spots = [[1, 0], [2, 2], [2, 0]], i = Math.min(2, Math.floor(t / 900)), [gx, gy] = spots[i];
+        ctx.globalAlpha = 0.35; mark(ctx, 'X', ox + gx * c + c / 2, oy + gy * c + c / 2, c, 1); ctx.globalAlpha = 1;
+        const px = ox + gx * c + c / 2 + 14, py = oy + gy * c + c / 2 + 14;
+        ctx.fillStyle = C.ink; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, py + 18); ctx.lineTo(px + 5, py + 13); ctx.lineTo(px + 12, py + 13); ctx.closePath(); ctx.fill();
+      }
+      const k = (t - 2800) / 500;
+      if (k > 0 && k < 1) { ctx.strokeStyle = 'rgba(255,255,255,' + (1 - k) + ')'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ox + 2 * c + c / 2, oy + c / 2, 10 + 24 * k, 0, 6.283); ctx.stroke(); }
+    },
+  });
+
+  const PAGES = [
+    { id: 'goal', scene: SC_GOAL, loop: 6800, still: 5600 },
+    { id: 'play', scene: SC_PLAY, loop: 5400, still: 4800 },
+  ];
+
+
+  // ---------- tekst: akapity, punktory ("• ") i pogrubienia (**tekst**), wszystko jako węzły DOM (bez innerHTML) ----------
+  function inline(node, s) {
+    s.split('**').forEach((part, i) => {
+      if (!part) return;
+      if (i % 2) { const b = document.createElement('strong'); b.textContent = part; node.appendChild(b); }
+      else node.appendChild(document.createTextNode(part));
+    });
+  }
+  function fillText(el, text) {
+    el.textContent = '';
+    let list = null;
+    text.split('\n').forEach(line => {
+      const bullet = line.startsWith('• ');
+      const node = document.createElement(bullet ? 'li' : 'p');
+      inline(node, bullet ? line.slice(2) : line);
+      if (bullet) { if (!list) { list = document.createElement('ul'); el.appendChild(list); } list.appendChild(node); }
+      else { list = null; el.appendChild(node); }
+    });
+  }
+
+  // ---------- animacja ----------
+  function stopAnim() { cancelAnimationFrame(raf); raf = 0; }
+  function startAnim() {
+    stopAnim();
+    const page = PAGES[idx], cv = els.canvas;
+    cv.hidden = !page.scene;
+    if (!page.scene) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = W * dpr; cv.height = H * dpr;
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const t0 = performance.now();
+    const frame = now => {
+      const t = reduced() ? page.still : Math.max(0, now - t0) % page.loop;
+      ctx.clearRect(0, 0, W, H);
+      page.scene(ctx, t, W, H);
+      raf = reduced() ? 0 : requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+  }
+
+  // ---------- okno ----------
+  function render() {
+    const page = PAGES[idx];
+    els.title.textContent = t('tut.' + page.id + '.title');
+    els.step.textContent = t('tut.step', idx + 1, PAGES.length);
+    fillText(els.text, t('tut.' + page.id + '.text'));
+    els.dots.textContent = '';
+    PAGES.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'tut-dot' + (i === idx ? ' active' : '');
+      b.setAttribute('aria-label', t('tut.goto', i + 1));
+      if (i === idx) b.setAttribute('aria-current', 'step');
+      b.addEventListener('click', () => go(i));
+      els.dots.appendChild(b);
+    });
+    els.prev.disabled = idx === 0;
+    els.next.textContent = t(idx === PAGES.length - 1 ? 'tut.done' : 'tut.next');
+    startAnim();
+  }
+  function go(i) { idx = clamp(i, 0, PAGES.length - 1); render(); }
+  function open(start) {
+    opener = document.activeElement;
+    idx = clamp(start || 0, 0, PAGES.length - 1);
+    root.hidden = false;
+    render();
+    els.next.focus();
+  }
+  function close() {
+    root.hidden = true;
+    stopAnim();
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch (e) {}
+    if (opener && opener.focus) opener.focus();
+  }
+  const isOpen = () => !root.hidden;
+
+  els.next.addEventListener('click', () => { if (idx >= PAGES.length - 1) close(); else go(idx + 1); });
+  els.prev.addEventListener('click', () => go(idx - 1));
+  els.close.addEventListener('click', close);
+  root.addEventListener('click', e => { if (e.target === root) close(); });          // kliknięcie w tło zamyka
+  addEventListener('keydown', e => {
+    if (!isOpen()) return;
+    if (e.key === 'Escape') { e.preventDefault(); close(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); if (idx < PAGES.length - 1) go(idx + 1); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); go(idx - 1); }
+    else if (e.key === 'Tab') {                                                      // fokus zostaje wewnątrz okna
+      const f = [...root.querySelectorAll('button:not([disabled])')];
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  const btn = document.getElementById('tutBtn');
+  if (btn) btn.addEventListener('click', () => open(0));
+
+  return {
+    open, close, isOpen,
+    refresh() { if (isOpen()) render(); },                                           // po zmianie języka
+    // Pierwsza wizyta: pokazujemy samouczek raz. Bez dostępu do pamięci przeglądarki nie otwieramy go sami (żeby nie męczyć).
+    autoOpen() {
+      let seen = true;
+      try { seen = localStorage.getItem(SEEN_KEY) === '1'; } catch (e) { seen = true; }
+      if (!seen) setTimeout(() => { if (!isOpen()) open(0); }, 500);
+    },
+    get page() { return idx; }, get pages() { return PAGES.length; },
+  };
+})();
+</script>
 <script>
 const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 const PLAYER = 'X', COMPUTER = 'O';
@@ -100,6 +434,8 @@ let score = load();
 
 const boardEl = document.getElementById('board');
 const statusEl = document.getElementById('status');
+let statusKey = '', lastWinLine = null;
+function setStatus(key) { statusKey = key; statusEl.textContent = key ? t(key) : ''; }
 const levelEl = document.getElementById('level');
 
 function load() {
@@ -168,7 +504,7 @@ function draw(winLine) {
     b.className = 'cell' + (v ? ' ' + v.toLowerCase() : '') + (winLine && winLine.includes(i) ? ' win' : '');
     b.textContent = v || '';
     b.disabled = over || !!v;
-    b.setAttribute('aria-label', `Pole ${i + 1}${v ? ': ' + v : ''}`);
+    b.setAttribute('aria-label', t('cell', i + 1, v));
     b.addEventListener('click', () => playerMove(i));
     boardEl.appendChild(b);
   });
@@ -178,14 +514,14 @@ function finish() {
   const w = winner(board);
   if (w) {
     over = true;
-    if (w.who === PLAYER) { score.player++; statusEl.textContent = 'Wygrałeś! 🎉'; }
-    else { score.computer++; statusEl.textContent = 'Komputer wygrał.'; }
-    save(); renderScore(); draw(w.line);
+    if (w.who === PLAYER) { score.player++; setStatus('status.win'); }
+    else { score.computer++; setStatus('status.lose'); }
+    lastWinLine = w.line; save(); renderScore(); draw(w.line);
     return true;
   }
   if (full(board)) {
     over = true; score.draws++;
-    statusEl.textContent = 'Remis.';
+    setStatus('status.draw');
     save(); renderScore(); draw();
     return true;
   }
@@ -197,27 +533,28 @@ function playerMove(i) {
   board[i] = PLAYER;
   draw();
   if (finish()) return;
-  statusEl.textContent = 'Ruch komputera…';
+  setStatus('status.thinking');
   boardEl.querySelectorAll('.cell').forEach(c => c.disabled = true);
   setTimeout(() => {
     board[computerMove()] = COMPUTER;
     draw();
-    if (!finish()) statusEl.textContent = 'Twój ruch (X)';
+    if (!finish()) setStatus('status.yourTurn');
   }, 350);
 }
 
 function newGame() {
+  lastWinLine = null;
   board = Array(9).fill(null);
   over = false;
   draw();
   if (playerStarts) {
-    statusEl.textContent = 'Twój ruch (X)';
+    setStatus('status.yourTurn');
   } else {
-    statusEl.textContent = 'Komputer zaczyna…';
+    setStatus('status.compStarts');
     setTimeout(() => {
       board[computerMove()] = COMPUTER;
       draw();
-      statusEl.textContent = 'Twój ruch (X)';
+      setStatus('status.yourTurn');
     }, 350);
   }
   playerStarts = !playerStarts; // zaczynają na zmianę
@@ -230,6 +567,18 @@ document.getElementById('resetScore').addEventListener('click', () => {
 });
 renderScore();
 newGame();
+
+// --- Język i samouczek ---
+function onLangChange() {
+  setStatus(statusKey);
+  draw(lastWinLine);
+  Tutorial.refresh();
+}
+document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+applyStatic();
+setStatus(statusKey);
+draw(lastWinLine);
+Tutorial.autoOpen();
 
 // --- Muzyka: spokojny, generowany na bieżąco podkład (Web Audio, bez plików) ---
 (function () {
@@ -297,12 +646,12 @@ newGame();
   function apply() {
     btn.textContent = muted ? '🔇' : '🔊';
     btn.setAttribute('aria-pressed', String(muted));
-    btn.title = muted ? 'Włącz muzykę' : 'Wycisz muzykę';
+    btn.title = t(muted ? 'music.off' : 'music.on');
     if (!ac) return;
-    const t = ac.currentTime;
-    master.gain.cancelScheduledValues(t);
-    master.gain.setValueAtTime(master.gain.value, t);
-    master.gain.linearRampToValueAtTime(muted ? 0 : 0.8, t + (muted ? 0.4 : 1.5));
+    const now = ac.currentTime;
+    master.gain.cancelScheduledValues(now);
+    master.gain.setValueAtTime(master.gain.value, now);
+    master.gain.linearRampToValueAtTime(muted ? 0 : 0.8, now + (muted ? 0.4 : 1.5));
     if (!muted && ac.state === 'suspended') ac.resume();
   }
 

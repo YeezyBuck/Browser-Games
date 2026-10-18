@@ -17,6 +17,7 @@
   <div class="head-right">
     <div id="roomInfo" hidden><span data-i18n="room">Pokój:</span> <strong id="roomCode"></strong> <button id="copyLink" type="button" data-i18n="copyLink">Kopiuj link</button></div>
     <button id="quitBtn" class="danger" type="button" hidden data-i18n="quit.btn" data-i18n-title="quit.title" title="Wyłącz serwer i tunel">⏻ Zamknij grę</button>
+    <button id="tutBtn" type="button" data-i18n="tut.btn" data-i18n-title="tut.btnTitle" title="Pokaż zasady i samouczek">❓ Jak grać</button>
     <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Język">
       <button type="button" data-lang="pl" aria-pressed="true">🇵🇱 Polski</button>
       <button type="button" data-lang="en" aria-pressed="false">🇬🇧 English</button>
@@ -116,6 +117,19 @@
   </div>
 </div>
 
+<div id="tutorial" class="tut" hidden role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+  <div class="tut-card">
+    <div class="tut-head"><span id="tutStep" class="tut-step"></span><button id="tutClose" type="button" class="tut-x" aria-label="Zamknij samouczek" data-i18n-aria="tut.close">✕</button></div>
+    <h2 id="tutTitle"></h2>
+    <canvas id="tutCanvas" width="320" height="220" aria-hidden="true"></canvas>
+    <div id="tutText" class="tut-text"></div>
+    <div class="tut-foot">
+      <div id="tutDots" class="tut-dots"></div>
+      <div class="tut-nav"><button id="tutPrev" type="button" data-i18n="tut.prev">Wstecz</button><button id="tutNext" class="primary" type="button" data-i18n="tut.next">Dalej</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="sound-btns">
   <button id="musicBtn" type="button" aria-pressed="false" title="Wycisz muzykę">🎵</button>
   <button id="mute" type="button" aria-pressed="false" title="Wycisz dźwięki">🔊</button>
@@ -126,6 +140,7 @@
 <script src="sea.js"></script>
 <script src="fireworks.js"></script>
 <script src="blast.js"></script>
+<script src="tutorial.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

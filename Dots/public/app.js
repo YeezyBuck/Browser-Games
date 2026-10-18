@@ -146,7 +146,7 @@ function updateMusicBtn() {
 Music.onChange(updateMusicBtn);
 $('#musicBtn').addEventListener('click', () => Music.toggle());
 document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
-function onLangChange() { updateMuteBtn(); updateMusicBtn(); shareSig = ''; render(); chatRendered = ''; if (state) renderChat(); }
+function onLangChange() { Tutorial.refresh(); updateMuteBtn(); updateMusicBtn(); shareSig = ''; render(); chatRendered = ''; if (state) renderChat(); }
 
 // ---------- czat ----------
 let chatOpen = false;
@@ -513,3 +513,4 @@ if (params.get('room')) $('#joinCode').value = params.get('room').toUpperCase().
 loadInfo().then(() => { if (state && state.phase === 'waiting') renderShare(); });
 render();
 if (session) connect();
+Tutorial.autoOpen();

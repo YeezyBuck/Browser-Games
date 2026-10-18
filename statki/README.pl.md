@@ -54,8 +54,8 @@ Samej gry nie trzeba „instalować” ani budować: nie ma `npm install`.
 Wybierz jedną z dróg. Po starcie w konsoli pojawi się adres gry.
 
 ### Windows – dwuklik (najłatwiej)
-- **`uruchom.bat`**: gra tylko w sieci domowej.
-- **`uruchom-tunel.bat`**: gra w sieci domowej **i przez internet** (wymaga cloudflared).
+- **`uruchom.bat`** (główny): sprawdza cloudflared (w razie potrzeby proponuje instalację), uruchamia tunel, potem grę i przeglądarkę. Gra działa w sieci domowej **i przez internet**.
+- **`uruchom-bez-tunelu.bat`**: tylko sieć domowa (bez cloudflared, bez linku i kodu QR do gry przez internet).
 
 Otworzy się okno konsoli: **nie zamykaj go podczas gry**. Strona gry otworzy się **sama w przeglądarce** (`http://localhost:3000`). Jeśli Node.js nie jest w PATH, pliki `.bat` próbują użyć `C:\Program Files\nodejs\node.exe`. Na koniec użyj przycisku **⏻ Zamknij grę** w grze (zobacz [rozdział 8](#8-zatrzymanie-serwera)); okno konsoli zamknie się samo.
 
@@ -66,7 +66,7 @@ node server.js            # tylko sieć domowa
 node server.js --tunnel   # z tunelem Cloudflare (gra przez internet)
 node server.js --open     # dodatkowo otwórz grę w przeglądarce
 ```
-Skróty `npm`: `npm start` (bez tunelu) i `npm run tunnel` (z tunelem).
+Skróty `npm`: `npm start` (z tunelem, jak `uruchom.bat`) i `npm run local` (bez tunelu).
 
 ### Co zobaczysz w konsoli
 ```
@@ -131,7 +131,7 @@ Naciśnij **Enter** (albo `T`), aby zainstalować, lub `n`, aby pominąć. Windo
 Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe foldery instalacji Windows.)
 
 ### Uruchomienie
-1. Uruchom **`uruchom-tunel.bat`** (Windows) albo `npm run tunnel`.
+1. Uruchom **`uruchom.bat`** (Windows) albo `npm start`.
 2. Start przebiega w trzech krokach widocznych w konsoli: **[1/3]** sprawdzenie, czy jest cloudflared (i propozycja instalacji, patrz wyżej), **[2/3]** uruchomienie tunelu i czekanie na jego adres, **[3/3]** dopiero wtedy start gry i otwarcie przeglądarki. Dzięki temu strona od razu zna adres do gry przez internet. Jeśli tunel nie wystartuje, gra i tak się uruchomi (tylko sieć domowa). Zajmuje to kilka sekund; w konsoli pojawi się ramka:
    ```
    ==================================================================
@@ -188,7 +188,7 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 | `node` nie jest rozpoznawany | Zainstaluj Node.js ([rozdz. 2](#2-instalacja-krok-po-kroku)), otwórz **nowy** terminal lub uruchom komputer ponownie. |
 | `EADDRINUSE` (port zajęty) | Inny program (albo druga kopia gry) używa portu 3000. Zamknij ją albo uruchom na innym porcie: `PORT=3001 node server.js`. |
 | Przeciwnik w domu nie może otworzyć adresu | Użyj adresu „w sieci lokalnej”, nie `localhost`. Oba urządzenia muszą być w tej samej sieci. Przy pytaniu zapory Windows zezwól Node.js w sieci prywatnej. |
-| Brak adresu „w internecie” w panelu | Serwer nie ma tunelu: uruchom **`uruchom-tunel.bat`** / `npm run tunnel`. Panel podpowiada, co zrobić (np. „tunel się uruchamia”, „zainstaluj cloudflared”). |
+| Brak adresu „w internecie” w panelu | Serwer działa bez tunelu (np. uruchomiony plikiem `uruchom-bez-tunelu.bat`): zamknij grę (**⏻ Zamknij grę**) i uruchom **`uruchom.bat`** / `npm start`. Panel podpowiada, co zrobić (np. „tunel się uruchamia”, „zainstaluj cloudflared”). |
 | „Nie znaleziono programu cloudflared” | Zainstaluj go ([rozdz. 5](#5-gra-przez-internet-tunel-cloudflare)) i uruchom serwer ponownie. |
 | Adres tunelu przestał działać | Tunel albo serwer został zatrzymany. Uruchom ponownie: dostaniesz **nowy** adres. Utwórz nową grę. |
 | „Ta gra już nie istnieje” | Serwer był restartowany (pokoje są w pamięci) albo pokój wygasł po 3 h bezczynności. Utwórz nową grę. |
@@ -198,7 +198,7 @@ Gra pamięta wybór języka i wyciszenia w przeglądarce. Tło ma wyłączone an
 | Strona wygląda po staremu po aktualizacji | Odśwież bez pamięci podręcznej: **Ctrl+F5**. |
 | Przeglądarka nie otworzyła się sama | Otwórz ręcznie `http://localhost:3000`. Automatyczne otwieranie działa tylko przy starcie z pliku `.bat` lub z flagą `--open`. |
 | Nie ma przycisku **⏻ Zamknij grę** | Jest widoczny tylko w przeglądarce na komputerze z serwerem, otwartej przez `localhost`/`127.0.0.1`. Użyj wtedy Ctrl+C w konsoli. |
-| Nie pojawiło się pytanie o instalację | Serwer nie działa w interaktywnej konsoli (np. uruchomiono go w tle). Uruchom `uruchom-tunel.bat` albo użyj flagi `--yes`. |
+| Nie pojawiło się pytanie o instalację | Serwer nie działa w interaktywnej konsoli (np. uruchomiono go w tle). Uruchom `uruchom.bat` albo użyj flagi `--yes`. |
 
 ## 10. Ustawienia i zabezpieczenia
 
@@ -239,8 +239,8 @@ statki/
 ├── server.js            serwer HTTP: reguły gry, pokoje, limity, tunel (bez zależności)
 ├── test.js              test integracyjny (node test.js)
 ├── package.json         skrypty: start, tunnel, test
-├── uruchom.bat          start serwera (Windows)
-├── uruchom-tunel.bat    start serwera z tunelem Cloudflare (Windows)
+├── uruchom.bat              główny start (Windows): cloudflared → tunel → gra → przeglądarka
+├── uruchom-bez-tunelu.bat   start bez tunelu, tylko sieć domowa (Windows)
 └── public/              pliki przeglądarkowe
     ├── index.html       szkielet strony
     ├── style.css        wygląd

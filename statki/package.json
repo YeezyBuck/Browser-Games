@@ -4,8 +4,8 @@
   "description": "Gra w statki dla dwóch osób przez przeglądarkę",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "tunnel": "node server.js --tunnel",
+    "start": "node server.js --tunnel --open",
+    "local": "node server.js --open",
     "test": "node test.js"
   },
   "private": true

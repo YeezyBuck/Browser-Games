@@ -8,6 +8,7 @@ if not exist "%NODE%" if /i not "%NODE%"=="node" (
   pause
   exit /b 1
 )
-echo Uruchamiam gre w statki z tunelem Cloudflare (gra przez internet)...
-"%NODE%" server.js --tunnel --open
+echo Statki: start bez tunelu (gra tylko w sieci domowej)
+echo.
+"%NODE%" server.js --open
 if errorlevel 1 pause

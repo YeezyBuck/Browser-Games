@@ -286,7 +286,7 @@ function safeEqual(a, b) {
 // ---------- tunel Cloudflare (gra przez internet) ----------
 const TUNNEL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/i;
 // status: off | starting | install_prompt | installing | on | not_installed | error
-const tunnel = { requested: false, url: null, status: 'off', child: null };
+const tunnel = { requested: false, url: null, status: 'off', child: null, log: [] };
 const CLOUDFLARED_DOCS = 'https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/';
 const KNOWN_CLOUDFLARED = ['C:/Program Files (x86)/cloudflared/cloudflared.exe', 'C:/Program Files/cloudflared/cloudflared.exe'];
 
@@ -367,6 +367,7 @@ async function startTunnel(port, opts = {}) {
   } catch (e) { tunnel.status = 'error'; console.log('Nie udało się uruchomić tunelu:', e.message); return; }
   tunnel.child = child;
   const onData = chunk => {
+    String(chunk).split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(l => { tunnel.log.push(l); if (tunnel.log.length > 30) tunnel.log.shift(); });
     const m = String(chunk).match(TUNNEL_RE);
     if (m && !tunnel.url) {
       tunnel.url = m[0]; tunnel.status = 'on';
@@ -645,7 +646,12 @@ async function main() {
     console.log(`[1/${steps}] Sprawdzam, czy jest cloudflared (potrzebny do gry przez internet)…`);
     await startTunnel(PORT);                                    // sprawdzenie, ewentualna instalacja i start tunelu
     console.log(`[2/${steps}] Uruchamiam tunel i czekam na jego adres…`);
-    if (!(await waitForTunnel(45000))) console.log('Tunel nie wystartował – uruchamiam samą grę (działa w sieci domowej).');
+    if (!(await waitForTunnel(45000))) {
+      console.log('\n!!! Tunel nie wystartował – gra uruchomi się tylko w sieci domowej (bez linku i kodu QR do gry przez internet).');
+      if (tunnel.status === 'starting') console.log('    Cloudflare nie odpowiedział w 45 s. Sprawdź połączenie z internetem i zaporę, potem uruchom grę ponownie.');
+      if (tunnel.log.length) console.log('    Ostatnie komunikaty cloudflared:\n      ' + tunnel.log.slice(-8).join('\n      '));
+      console.log('');
+    }
   }
   console.log(`[${steps}/${steps}] Uruchamiam grę…`);
   server.headersTimeout = 15000;
@@ -659,7 +665,7 @@ async function main() {
     console.log(`\nStatki działają: http://localhost:${PORT}`);
     lanUrls().forEach(u => console.log(`  w sieci lokalnej: ${u}`));
     if (tunnel.url) console.log(`  przez internet:   ${tunnel.url}   (link z kodem pokoju zobaczysz w grze)`);
-    else if (!wantTunnel) console.log('Gra przez internet: uruchom serwer z tunelem (npm run tunnel lub uruchom-tunel.bat).');
+    else if (!wantTunnel) console.log('Gra przez internet: uruchom serwer plikiem uruchom.bat (albo npm start), a nie uruchom-bez-tunelu.bat.');
     if (open) openBrowser(`http://localhost:${PORT}`);
   });
 }

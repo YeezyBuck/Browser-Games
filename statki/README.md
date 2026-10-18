@@ -54,8 +54,8 @@ The game itself needs no installation or build: there is no `npm install`.
 Pick one of the options. After startup the console shows the game address.
 
 ### Windows – double-click (easiest)
-- **`uruchom.bat`**: play on your home network only.
-- **`uruchom-tunel.bat`**: play on your home network **and over the internet** (needs cloudflared).
+- **`uruchom.bat`** (the main one): checks cloudflared (offers to install it if needed), starts the tunnel, then the game and the browser. The game works on your home network **and over the internet**.
+- **`uruchom-bez-tunelu.bat`**: home network only (no cloudflared, no internet link or QR code).
 
 A console window opens: **do not close it while playing**. The game page opens **automatically in your browser** (`http://localhost:3000`). If Node.js is not in the PATH, the `.bat` files try `C:\Program Files\nodejs\node.exe`. To finish, use the **⏻ Quit game** button in the game (see [section 8](#8-stopping-the-server)); the console window closes by itself.
 
@@ -66,7 +66,7 @@ node server.js            # home network only
 node server.js --tunnel   # with a Cloudflare tunnel (internet play)
 node server.js --open     # additionally open the game in your browser
 ```
-`npm` shortcuts: `npm start` (no tunnel) and `npm run tunnel` (with tunnel).
+`npm` shortcuts: `npm start` (with tunnel, like `uruchom.bat`) and `npm run local` (no tunnel).
 
 ### What you will see in the console
 ```
@@ -132,7 +132,7 @@ Zainstalować go teraz poleceniem "winget install Cloudflare.cloudflared"? [T/n]
 After installing, open a new terminal window. (The server also checks the typical Windows install folders on its own.)
 
 ### Starting it
-1. Start **`uruchom-tunel.bat`** (Windows) or `npm run tunnel`.
+1. Start **`uruchom.bat`** (Windows) or `npm start`.
 2. The start goes in three steps, shown in the console: **[1/3]** it checks whether cloudflared is installed (and offers to install it, see above), **[2/3]** it starts the tunnel and waits for its address, **[3/3]** only then it starts the game and opens the browser. So the page already knows the internet address when it opens. If the tunnel fails to start, the game still starts (home network only). It takes a few seconds; a box appears in the console:
    ```
    ==================================================================
@@ -190,7 +190,7 @@ The language and mute choices are remembered in the browser. The background anim
 | `node` is not recognized | Install Node.js ([section 2](#2-installation-step-by-step)), open a **new** terminal or restart the computer. |
 | `EADDRINUSE` (port in use) | Another program (or a second copy of the game) is using port 3000. Close it or use another port: `PORT=3001 node server.js`. |
 | Opponent at home cannot open the address | Use the "local network" address, not `localhost`. Both devices must be on the same network. If Windows Firewall asks, allow Node.js on private networks. |
-| No "over the internet" address in the panel | The server has no tunnel: start **`uruchom-tunel.bat`** / `npm run tunnel`. The panel hints at what to do (e.g. "tunnel is starting", "install cloudflared"). |
+| No "over the internet" address in the panel | The server runs without a tunnel (e.g. it was started with `uruchom-bez-tunelu.bat`): quit the game (**⏻ Quit game**) and start **`uruchom.bat`** / `npm start`. The panel hints at what to do (e.g. "tunnel is starting", "install cloudflared"). |
 | "cloudflared not found" | Install it ([section 5](#5-playing-over-the-internet-cloudflare-tunnel)) and start the server again. |
 | The tunnel address stopped working | The tunnel or server was stopped. Start it again to get a **new** address, and create a new game. |
 | "This game no longer exists" | The server was restarted (rooms are in memory) or the room expired after 3 hours of inactivity. Create a new game. |
@@ -200,7 +200,7 @@ The language and mute choices are remembered in the browser. The background anim
 | The page looks old after an update | Refresh without cache: **Ctrl+F5**. |
 | The browser did not open by itself | Open `http://localhost:3000` manually. Automatic opening works only when started with a `.bat` file or with the `--open` flag. |
 | No **⏻ Quit game** button | It is shown only in the browser on the computer running the server, opened via `localhost`/`127.0.0.1`. Use Ctrl+C in the console instead. |
-| The install question did not appear | The server is not running in an interactive console (e.g. it was started in the background). Start `uruchom-tunel.bat`, or use the `--yes` flag. |
+| The install question did not appear | The server is not running in an interactive console (e.g. it was started in the background). Start `uruchom.bat`, or use the `--yes` flag. |
 
 ## 10. Settings and security
 
@@ -241,8 +241,8 @@ statki/
 ├── server.js            HTTP server: game rules, rooms, limits, tunnel (no dependencies)
 ├── test.js              integration test (node test.js)
 ├── package.json         scripts: start, tunnel, test
-├── uruchom.bat          start the server (Windows)
-├── uruchom-tunel.bat    start the server with a Cloudflare tunnel (Windows)
+├── uruchom.bat              main start (Windows): cloudflared → tunnel → game → browser
+├── uruchom-bez-tunelu.bat   start without a tunnel, home network only (Windows)
 └── public/              browser files
     ├── index.html       page skeleton
     ├── style.css        styling

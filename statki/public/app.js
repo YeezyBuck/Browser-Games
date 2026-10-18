@@ -132,7 +132,7 @@ function updateMusicBtn() {
 Music.onChange(updateMusicBtn);
 $('#musicBtn').addEventListener('click', () => Music.toggle());
 document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
-function onLangChange() { updateMuteBtn(); updateMusicBtn(); render(); chatRendered = ''; if (state) renderChat(); }
+function onLangChange() { updateMuteBtn(); updateMusicBtn(); shareSig = ''; render(); chatRendered = ''; if (state) renderChat(); }
 
 // ---------- plansze ----------
 // cellClass(x,y) -> tablica klas; onClick(x,y) opcjonalne
@@ -419,6 +419,22 @@ function roomUrl(base) { return base.replace(/\/$/, '') + '/?room=' + session.co
 // Najlepszy link do skopiowania: internet (tunel) jeśli jest, w przeciwnym razie adres, pod którym działa strona.
 function roomLink() { return roomUrl(info && info.publicUrl ? info.publicUrl : location.origin); }
 
+// Rysuje kod QR (ciemny na białym, z ciszą dookoła – tak skanuje się najpewniej).
+function drawQr(canvas, text) {
+  const qr = qrcode(0, 'M');
+  qr.addData(text); qr.make();
+  const n = qr.getModuleCount(), quiet = 4;
+  const scale = Math.max(3, Math.floor(220 / (n + quiet * 2)));
+  const size = (n + quiet * 2) * scale;
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++)
+    if (qr.isDark(r, c)) ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+}
+
+let shareSig = '';
 function renderShare() {
   const box = $('#shareBox');
   if (!box || !session) return;
@@ -426,6 +442,9 @@ function renderShare() {
   if (info && info.publicUrl) groups.push(['share.internet', [roomUrl(info.publicUrl)]]);
   if (info && info.lan && info.lan.length) groups.push(['share.lan', info.lan.map(roomUrl)]);
   if (!groups.length) groups.push(['share.here', [roomUrl(location.origin)]]);
+  const sig = lang + '|' + JSON.stringify(groups) + '|' + (info ? info.tunnel + info.local : '');
+  if (sig === shareSig) return;                                    // nic się nie zmieniło – nie ruszamy pól (zaznaczenie, fokus)
+  shareSig = sig;
   box.innerHTML = '';
   groups.forEach(([labelKey, urls]) => {
     const g = document.createElement('div'); g.className = 'share-group';
@@ -440,6 +459,15 @@ function renderShare() {
       });
       line.append(inp, btn); g.appendChild(line);
     });
+    if (labelKey === 'share.internet' && typeof qrcode === 'function') {        // QR tylko dla linku przez internet
+      try {
+        const qb = document.createElement('div'); qb.className = 'qr-box';
+        const cv = document.createElement('canvas'); cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', t('share.qrAlt')); cv.title = urls[0];
+        drawQr(cv, urls[0]);
+        const hint = document.createElement('p'); hint.className = 'qr-hint'; hint.textContent = t('share.qr');
+        qb.append(cv, hint); g.appendChild(qb);
+      } catch (e) { /* zbyt długi adres albo błąd biblioteki – panel działa bez QR */ }
+    }
     box.appendChild(g);
   });
   // wskazówka o tunelu – tylko dla gospodarza (z komputera/sieci domowej)
@@ -552,6 +580,7 @@ async function startPolling(q) {
 }
 
 function enter(sess) {
+  shareSig = '';
   saveSession(sess);
   state = null; lastSeq = null;
   place = { ships: [], horiz: true, sel: 4, hover: null };

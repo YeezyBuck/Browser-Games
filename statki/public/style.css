@@ -149,3 +149,8 @@ input { width: 110px; text-transform: uppercase; letter-spacing: .25em; text-ali
 .msg .meta { display: block; font-size: .7rem; opacity: .65; margin-bottom: 1px; }
 .chat-form { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--line); }
 .chat-form input { flex: 1; min-width: 0; width: auto; letter-spacing: 0; text-transform: none; text-align: left; }
+
+/* Kod QR z linkiem do gry przez internet */
+.qr-box { display: flex; gap: 14px; align-items: center; margin: 8px 0 4px; flex-wrap: wrap; }
+.qr-box canvas { background: #fff; border-radius: 8px; flex: none; image-rendering: pixelated; }
+.qr-box .qr-hint { margin: 0; color: var(--muted); font-size: .9rem; max-width: 220px; }

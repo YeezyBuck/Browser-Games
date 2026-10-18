@@ -184,6 +184,13 @@ async function main() {
   assert.ok(rl >= 4); ok('czat: limit wiadomości na gracza (429)');
   const roomsChat = (await cs(ca)).chat.length; assert.ok(roomsChat <= 50); ok('czat: do klienta trafia maks. 50 ostatnich wiadomości');
 
+  // ---------- kod QR (biblioteka dołączona do projektu) ----------
+  const qrRes = await fetch(base + '/vendor/qrcode.js');
+  assert.strictEqual(qrRes.status, 200); assert.ok(/javascript/.test(qrRes.headers.get('content-type'))); ok('biblioteka QR serwowana z własnego serwera (zgodnie z CSP)');
+  const qrcodeLib = require('./public/vendor/qrcode.js');
+  const qr = qrcodeLib(0, 'M'); qr.addData('https://bardzo-dlugi-losowy-adres-tunelu.trycloudflare.com/?room=ABCDEF'); qr.make();
+  assert.ok(qr.getModuleCount() >= 25 && qr.getModuleCount() <= 57); ok('QR dla typowego adresu tunelu generuje się (' + qr.getModuleCount() + '×' + qr.getModuleCount() + ' modułów)');
+
   // ---------- zabezpieczenia ----------
   const hdr = (await fetch(base + '/')).headers;
   assert.ok(/default-src 'self'/.test(hdr.get('content-security-policy')) && /script-src 'self'/.test(hdr.get('content-security-policy')));

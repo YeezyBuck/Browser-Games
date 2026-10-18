@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kółko i krzyżyk</title>
+<style>
+  :root {
+    --card: rgba(18, 22, 48, 0.62); --text: #eef1ff; --muted: #a9b1d6;
+    --line: rgba(160, 175, 255, 0.28); --x: #ff7eb3; --o: #7cc4ff;
+    --win: rgba(255, 214, 102, 0.35); --hover: rgba(255, 255, 255, 0.10);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--text);
+    background: linear-gradient(160deg, #0b1030 0%, #2a1a5e 45%, #5b2a86 75%, #c0476e 115%) fixed;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  #sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+  header, main { position: relative; z-index: 1; }
+  header {
+    width: 100%; background: var(--card); backdrop-filter: blur(6px); border-bottom: 1px solid var(--line);
+    padding: 14px 16px; display: flex; justify-content: center;
+  }
+  .score { display: flex; gap: 28px; align-items: center; text-align: center; flex-wrap: wrap; justify-content: center; }
+  .score div span { display: block; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .score div strong { font-size: 1.6rem; font-variant-numeric: tabular-nums; }
+  .score .x strong { color: var(--x); }
+  .score .o strong { color: var(--o); }
+  main { padding: 20px 16px 32px; display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; }
+  #status { font-size: 1.1rem; min-height: 1.6em; }
+  #board {
+    display: grid; grid-template-columns: repeat(3, 100px); grid-auto-rows: 100px; gap: 8px;
+    width: 316px; height: 316px; flex: none;
+  }
+  .cell {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    width: 100px; height: 100px; padding: 0; line-height: 1; overflow: hidden;
+    font-size: 3.4rem; font-weight: 700; cursor: pointer; backdrop-filter: blur(4px);
+    color: var(--text); display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .cell:hover:not(:disabled) { background: var(--hover); }
+  .cell:disabled { cursor: default; }
+  .cell.x { color: var(--x); }
+  .cell.o { color: var(--o); }
+  .cell.win { background: var(--win); }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+  button, select {
+    font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--card); color: var(--text); cursor: pointer;
+  }
+  option { color: #1d2330; }
+  #mute {
+    position: fixed; right: 14px; bottom: 14px; z-index: 2; width: 48px; height: 48px;
+    padding: 0; border-radius: 50%; font-size: 1.4rem; line-height: 1;
+    display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px);
+  }
+
+  button:hover { background: var(--hover); }
+  button.primary { background: var(--o); border-color: var(--o); color: #fff; }
+  button.primary:hover { filter: brightness(1.08); }
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<button id="mute" type="button" aria-pressed="false" title="Wycisz muzykę">🔊</button>
+<header>
+  <div class="score" aria-live="polite">
+    <div><span>Rozegrane gry</span><strong id="games">0</strong></div>
+    <div class="x"><span>Ty (X)</span><strong id="winsPlayer">0</strong></div>
+    <div><span>Remisy</span><strong id="draws">0</strong></div>
+    <div class="o"><span>Komputer (O)</span><strong id="winsComputer">0</strong></div>
+  </div>
+</header>
+<main>
+  <div id="status"></div>
+  <div id="board" role="grid" aria-label="Plansza"></div>
+  <div class="controls">
+    <button class="primary" id="newGame">Nowa gra</button>
+    <label>Poziom:
+      <select id="level">
+        <option value="easy">Łatwy</option>
+        <option value="hard" selected>Trudny</option>
+      </select>
+    </label>
+    <button id="resetScore">Wyzeruj wynik</button>
+  </div>
+</main>
+<script>
+const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+const PLAYER = 'X', COMPUTER = 'O';
+const KEY = 'kik-score';
+
+let board, over, playerStarts = true;
+let score = load();
+
+const boardEl = document.getElementById('board');
+const statusEl = document.getElementById('status');
+const levelEl = document.getElementById('level');
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && ['player','computer','draws'].every(k => Number.isInteger(s[k]))) return s;
+  } catch (e) {}
+  return { player: 0, computer: 0, draws: 0 };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(score)); } catch (e) {} }
+
+function renderScore() {
+  document.getElementById('games').textContent = score.player + score.computer + score.draws;
+  document.getElementById('winsPlayer').textContent = score.player;
+  document.getElementById('winsComputer').textContent = score.computer;
+  document.getElementById('draws').textContent = score.draws;
+}
+
+function winner(b) {
+  for (const l of LINES) {
+    const [a, c, d] = l;
+    if (b[a] && b[a] === b[c] && b[a] === b[d]) return { who: b[a], line: l };
+  }
+  return null;
+}
+const full = b => b.every(Boolean);
+
+function minimax(b, turn) {
+  const w = winner(b);
+  if (w) return w.who === COMPUTER ? 10 : -10;
+  if (full(b)) return 0;
+  let best = turn === COMPUTER ? -Infinity : Infinity;
+  for (let i = 0; i < 9; i++) {
+    if (b[i]) continue;
+    b[i] = turn;
+    const v = minimax(b, turn === COMPUTER ? PLAYER : COMPUTER);
+    b[i] = null;
+    best = turn === COMPUTER ? Math.max(best, v) : Math.min(best, v);
+  }
+  return best;
+}
+
+function computerMove() {
+  const free = board.map((v, i) => v ? -1 : i).filter(i => i >= 0);
+  // Poziom łatwy: co druga decyzja losowa, tak by dało się wygrać.
+  if (levelEl.value === 'easy' && Math.random() < 0.6) {
+    return free[Math.floor(Math.random() * free.length)];
+  }
+  // Pierwszy ruch na pustej planszy: każdy daje remis, więc pomijamy drogie liczenie.
+  if (free.length === 9) return Math.floor(Math.random() * 9);
+  let bestVal = -Infinity, moves = [];
+  for (const i of free) {
+    board[i] = COMPUTER;
+    const v = minimax(board, PLAYER);
+    board[i] = null;
+    if (v > bestVal) { bestVal = v; moves = [i]; }
+    else if (v === bestVal) moves.push(i);
+  }
+  return moves[Math.floor(Math.random() * moves.length)];
+}
+
+function draw(winLine) {
+  boardEl.innerHTML = '';
+  board.forEach((v, i) => {
+    const b = document.createElement('button');
+    b.className = 'cell' + (v ? ' ' + v.toLowerCase() : '') + (winLine && winLine.includes(i) ? ' win' : '');
+    b.textContent = v || '';
+    b.disabled = over || !!v;
+    b.setAttribute('aria-label', `Pole ${i + 1}${v ? ': ' + v : ''}`);
+    b.addEventListener('click', () => playerMove(i));
+    boardEl.appendChild(b);
+  });
+}
+
+function finish() {
+  const w = winner(board);
+  if (w) {
+    over = true;
+    if (w.who === PLAYER) { score.player++; statusEl.textContent = 'Wygrałeś! 🎉'; }
+    else { score.computer++; statusEl.textContent = 'Komputer wygrał.'; }
+    save(); renderScore(); draw(w.line);
+    return true;
+  }
+  if (full(board)) {
+    over = true; score.draws++;
+    statusEl.textContent = 'Remis.';
+    save(); renderScore(); draw();
+    return true;
+  }
+  return false;
+}
+
+function playerMove(i) {
+  if (over || board[i]) return;
+  board[i] = PLAYER;
+  draw();
+  if (finish()) return;
+  statusEl.textContent = 'Ruch komputera…';
+  boardEl.querySelectorAll('.cell').forEach(c => c.disabled = true);
+  setTimeout(() => {
+    board[computerMove()] = COMPUTER;
+    draw();
+    if (!finish()) statusEl.textContent = 'Twój ruch (X)';
+  }, 350);
+}
+
+function newGame() {
+  board = Array(9).fill(null);
+  over = false;
+  draw();
+  if (playerStarts) {
+    statusEl.textContent = 'Twój ruch (X)';
+  } else {
+    statusEl.textContent = 'Komputer zaczyna…';
+    setTimeout(() => {
+      board[computerMove()] = COMPUTER;
+      draw();
+      statusEl.textContent = 'Twój ruch (X)';
+    }, 350);
+  }
+  playerStarts = !playerStarts; // zaczynają na zmianę
+}
+
+document.getElementById('newGame').addEventListener('click', newGame);
+document.getElementById('resetScore').addEventListener('click', () => {
+  score = { player: 0, computer: 0, draws: 0 };
+  save(); renderScore();
+});
+renderScore();
+newGame();
+
+// --- Muzyka: spokojny, generowany na bieżąco podkład (Web Audio, bez plików) ---
+(function () {
+  const btn = document.getElementById('mute');
+  const MKEY = 'kik-muted';
+  let muted = false;
+  try { muted = localStorage.getItem(MKEY) === '1'; } catch (e) {}
+
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  // Am - F - C - G, każdy akord ~8 s
+  const CHORDS = [[57, 60, 64, 69], [53, 57, 60, 65], [48, 55, 60, 64], [55, 59, 62, 67]];
+  const BELLS = [69, 72, 74, 76, 79, 81, 84]; // pentatonika A-moll
+  const CHORD_LEN = 8;
+  let ac, master, bus, started = false, nextChord = 0, idx = 0, timer;
+
+  function build() {
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    master = ac.createGain(); master.gain.value = 0; master.connect(ac.destination);
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+    lp.connect(master);
+    bus = ac.createGain(); bus.connect(lp);
+    // prosty pogłos: opóźnienie ze sprzężeniem
+    const d = ac.createDelay(1); d.delayTime.value = 0.42;
+    const fb = ac.createGain(); fb.gain.value = 0.38;
+    const dl = ac.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 1800;
+    bus.connect(d); d.connect(dl); dl.connect(fb); fb.connect(d); dl.connect(lp);
+  }
+
+  function tone(freq, t0, dur, vol, type, attack) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = freq;
+    o.detune.value = (Math.random() - 0.5) * 10;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(vol, t0 + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(bus);
+    o.start(t0); o.stop(t0 + dur + 0.1);
+  }
+
+  function schedule() {
+    // planujemy z wyprzedzeniem, żeby muzyka nie urywała się przy zajętym wątku
+    while (nextChord < ac.currentTime + 6) {
+      const ch = CHORDS[idx % CHORDS.length];
+      ch.forEach(m => tone(hz(m), nextChord, CHORD_LEN + 2, 0.05, 'triangle', 2.5));
+      tone(hz(ch[0] - 12), nextChord, CHORD_LEN + 1, 0.07, 'sine', 2);
+      // kilka cichych dzwonków w trakcie akordu
+      let t = nextChord + 1 + Math.random() * 1.5;
+      while (t < nextChord + CHORD_LEN - 1) {
+        tone(hz(BELLS[Math.floor(Math.random() * BELLS.length)]), t, 3.5, 0.045, 'sine', 0.02);
+        t += 1.8 + Math.random() * 2.6;
+      }
+      nextChord += CHORD_LEN; idx++;
+    }
+  }
+
+  function start() {
+    if (started) return;
+    started = true;
+    build();
+    nextChord = ac.currentTime + 0.1;
+    schedule();
+    timer = setInterval(schedule, 1000);
+  }
+
+  function apply() {
+    btn.textContent = muted ? '🔇' : '🔊';
+    btn.setAttribute('aria-pressed', String(muted));
+    btn.title = muted ? 'Włącz muzykę' : 'Wycisz muzykę';
+    if (!ac) return;
+    const t = ac.currentTime;
+    master.gain.cancelScheduledValues(t);
+    master.gain.setValueAtTime(master.gain.value, t);
+    master.gain.linearRampToValueAtTime(muted ? 0 : 0.8, t + (muted ? 0.4 : 1.5));
+    if (!muted && ac.state === 'suspended') ac.resume();
+  }
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    muted = !muted;
+    try { localStorage.setItem(MKEY, muted ? '1' : '0'); } catch (err) {}
+    if (!muted) start();
+    apply();
+  });
+
+  // Przeglądarki blokują dźwięk do pierwszej interakcji – startujemy po pierwszym kliknięciu.
+  function firstGesture() {
+    removeEventListener('pointerdown', firstGesture);
+    removeEventListener('keydown', firstGesture);
+    if (!muted) { start(); apply(); }
+  }
+  addEventListener('pointerdown', firstGesture);
+  addEventListener('keydown', firstGesture);
+
+  document.addEventListener('visibilitychange', () => {
+    if (!ac) return;
+    if (document.hidden) ac.suspend(); else if (!muted) ac.resume();
+  });
+  apply();
+})();
+
+// --- Niebo: migające gwiazdki i ruchome konstelacje ---
+(function () {
+  const cv = document.getElementById('sky'), ctx = cv.getContext('2d');
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W, H, stars, groups, dpr;
+
+  function setup() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(W * H / 7000);
+    stars = Array.from({ length: n }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.3 + 0.3, f: Math.random() * 2 + 0.6, p: Math.random() * 6.28
+    }));
+    const g = Math.max(3, Math.round(W * H / 160000));
+    groups = Array.from({ length: g }, () => {
+      const cx = Math.random() * W, cy = Math.random() * H, k = 5 + Math.floor(Math.random() * 3);
+      const a = Math.random() * 6.28, sp = 8 + Math.random() * 10; // px/s, cała grupa płynie razem
+      return {
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        pts: Array.from({ length: k }, (_, i) => ({
+          x: cx + (i - k / 2) * 38 + (Math.random() - 0.5) * 30,
+          y: cy + (Math.random() - 0.5) * 90,
+          p: Math.random() * 6.28
+        }))
+      };
+    });
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min((now - last) / 1000, 0.1); last = now;
+    const t = now / 1000;
+    ctx.clearRect(0, 0, W, H);
+
+    for (const s of stars) {
+      const a = still ? 0.7 : 0.25 + 0.75 * (0.5 + 0.5 * Math.sin(t * s.f + s.p));
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.28); ctx.fill();
+    }
+
+    for (const g of groups) {
+      if (!still) {
+        for (const q of g.pts) { q.x += g.vx * dt; q.y += g.vy * dt; }
+        // zawinięcie całej konstelacji, gdy cała wyjdzie poza ekran
+        const xs = g.pts.map(q => q.x), ys = g.pts.map(q => q.y), m = 60;
+        if (Math.max(...xs) < -m) g.pts.forEach(q => q.x += W + 2 * m + 200);
+        if (Math.min(...xs) > W + m) g.pts.forEach(q => q.x -= W + 2 * m + 200);
+        if (Math.max(...ys) < -m) g.pts.forEach(q => q.y += H + 2 * m + 200);
+        if (Math.min(...ys) > H + m) g.pts.forEach(q => q.y -= H + 2 * m + 200);
+      }
+      ctx.strokeStyle = 'rgba(170,190,255,0.35)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      g.pts.forEach((q, i) => i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y));
+      ctx.stroke();
+      for (const q of g.pts) {
+        const a = still ? 0.95 : 0.6 + 0.4 * Math.sin(t * 1.5 + q.p);
+        ctx.fillStyle = `rgba(220,230,255,${a})`;
+        ctx.shadowColor = 'rgba(160,190,255,0.9)'; ctx.shadowBlur = 8;
+        ctx.beginPath(); ctx.arc(q.x, q.y, 2.2, 0, 6.28); ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+    }
+    if (!still) requestAnimationFrame(frame);
+  }
+
+  setup(); requestAnimationFrame(frame);
+  addEventListener('resize', () => { setup(); if (still) requestAnimationFrame(frame); });
+})();
+</script>
+</body>
+</html>

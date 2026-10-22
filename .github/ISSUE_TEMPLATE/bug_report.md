@@ -5,7 +5,7 @@ title: "[Bug] "
 labels: bug
 ---
 
-**Game / Gra:** WarShips / Dots / TicTacToe
+**Game / Gra:** WarShips / Dots / CapRace / TicTacToe
 
 **What happened? / Co się stało?**
 

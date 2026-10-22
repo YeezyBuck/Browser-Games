@@ -1,0 +1,23 @@
+{
+  "name": "caprace",
+  "version": "1.0.0",
+  "description": "Wyścig kapsli dla dwóch osób przez przeglądarkę",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js --tunnel --open",
+    "local": "node server.js --open",
+    "test": "node engine.test.js && node test.js"
+  },
+  "private": true,
+  "license": "MIT",
+  "author": "YeezyBuck",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YeezyBuck/Browser-Games.git",
+    "directory": "CapRace"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/YeezyBuck/Browser-Games/tree/main/CapRace"
+}

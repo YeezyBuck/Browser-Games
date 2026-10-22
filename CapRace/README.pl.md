@@ -2,7 +2,7 @@
 
 🇬🇧 [English version](README.md)
 
-Podwórkowy klasyk, **wyścig kapsli**, dla **dwóch osób**: w sieci domowej albo **przez internet**. Każdy gracz ma jeden kapsel, a oboje ścigacie się po **losowo wygenerowanym torze** narysowanym kredą na asfalcie. Kapsel pstrykasz myszką (albo palcem): **miejsce uderzenia** decyduje o rotacji, a **odciągnięcie kursora** o sile. Wygrywa kapsel, który pierwszy minie linię mety. W grze są: czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, tło z kredowymi rysunkami, wesoła muzyka, efekty dźwiękowe i fajerwerki dla zwycięzcy.
+Podwórkowy klasyk, **wyścig kapsli**, dla **dwóch osób**: w sieci domowej albo **przez internet**. Każdy gracz ma jeden kapsel, a oboje ścigacie się po **losowo wygenerowanym torze** narysowanym kredą na asfalcie. Kapsel pstrykasz myszką (albo palcem): **miejsce uderzenia** decyduje o rotacji, a **odciągnięcie kursora** o sile. Wygrywa kapsel, który pierwszy minie linię mety. W grze są: czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, kredowe rysunki na torze i w tle, rytmiczna elektroniczna muzyka wyścigowa, efekty dźwiękowe i fajerwerki dla zwycięzcy.
 
 Nie trzeba instalować żadnych bibliotek: wystarczy **Node.js**. Serwer jest sędzią: losuje tor, liczy fizykę każdego pstryknięcia i przekazuje wynik obu graczom. Gra powstała na bazie [WarShips](../WarShips/README.pl.md) i [Dots](../Dots/README.pl.md) i korzysta z ich infrastruktury (pokoje, tunel Cloudflare, czat, zabezpieczenia).
 
@@ -120,12 +120,12 @@ Warto wiedzieć: adres tunelu jest **tymczasowy** (za każdym razem inny), a kom
 | Zmiana języka | przyciski **Polski / English** u góry (zapamiętywane) |
 | Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, pstrykanie, rotacja, tor i bandy, kolejka i zderzenia, wskazówki), po polsku i angielsku; działają strzałki i Esc |
 | Czat | przycisk 💬 w lewym dolnym rogu; Enter wysyła, Esc zamyka; do 200 znaków |
-| Muzyka / efekty | przyciski 🎵 / 🔊 (zapamiętywane); dźwięki: pstryknięcie, odbicie od bandy, brzęk kapsli, meta |
+| Muzyka / efekty | przyciski 🎵 / 🔊 (zapamiętywane); muzyka: oryginalny elektroniczny kawałek „wyścigowy” generowany w przeglądarce (ok. 126 uderzeń na minutę); dźwięki: pstryknięcie, odbicie od bandy, brzęk kapsli, meta |
 | Kopiowanie linku | **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
 | Zamknięcie gry | **⏻ Zamknij grę** (tylko w przeglądarce na komputerze z serwerem) |
 | Odświeżenie strony | nie wyrzuca z gry: sesja jest pamiętana w karcie, a trwający lot dołącza się w miejscu, w którym jest |
 
-Tło z kredowymi rysunkami jest rysowane raz, bez animacji. Efekty cząsteczkowe i fajerwerki wyłączają się, gdy system ma włączone „ograniczenie ruchu”. Na wąskich ekranach plansza zachowuje minimalną skalę, żeby kapsel był dość duży do dotknięcia.
+Kredowe rysunki (na torze: strzałki, gwiazdki, buźki, klasy, ślady opon i napis „GO!” za startem; obok toru: drobne rysunki na asfalcie) to tylko ozdoba: są rozmieszczane z seeda toru, więc obaj gracze widzą te same, i nie wpływają na fizykę. Rysunki w tle są rysowane raz, bez animacji. Efekty cząsteczkowe i fajerwerki wyłączają się, gdy system ma włączone „ograniczenie ruchu”. Na wąskich ekranach plansza zachowuje minimalną skalę, żeby kapsel był dość duży do dotknięcia.
 
 ## 7. Zatrzymanie serwera
 
@@ -176,7 +176,7 @@ Stałe fizyki (rozmiar kapsla, szerokość toru, tarcie, rotacja, limit pstrykni
 cd CapRace
 npm test                 # = node engine.test.js && node test.js
 ```
-- `engine.test.js` (28 testów): silnik: ten sam seed daje ten sam tor, 450 losowych torów (długość, brak nakładających się korytarzy, gładka krzywa), wejście pstryknięcia (anulowanie, przycinanie, znak rotacji), zasięg i skręt pstryknięcia, zderzenia (pęd, brak przyrostu energii, kapsle nigdy się nie nakładają), 1000 losowych pstryknięć na 40 torach (kapsel nigdy nie opuszcza toru), meta, determinizm i kolejność pstrykania.
+- `engine.test.js` (31 testów): silnik: ten sam seed daje ten sam tor, 450 losowych torów (długość, brak nakładających się korytarzy, gładka krzywa), wejście pstryknięcia (anulowanie, przycinanie, znak rotacji), zasięg i skręt pstryknięcia, zderzenia (pęd, brak przyrostu energii, kapsle nigdy się nie nakładają), 1000 losowych pstryknięć na 40 torach (kapsel nigdy nie opuszcza toru), meta, determinizm, kolejność pstrykania i kredowe rysunki (deterministyczne, na torze i z dala od band).
 - `test.js` (61 testów): serwer przez HTTP: pokoje i ustawienia, walidacja pstryknięć, blokada „busy”, obie zasady kolejki, meta, limit pstryknięć, poddanie się, rewanż, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
 
 ## 11. Struktura projektu (dla programistów)
@@ -196,7 +196,7 @@ CapRace/
     ├── board.js           plansza na canvasie: tor, kapsle, kamera, minimapa, celowanie myszą/dotykiem
     ├── i18n.js            tłumaczenia PL/EN
     ├── tutorial.js        samouczek w grze: kroki i animacje (jedna korzysta z prawdziwego silnika)
-    ├── music.js, chalk.js wesoła muzyka i tło z kredowymi rysunkami
+    ├── music.js, chalk.js elektroniczna muzyka wyścigowa (generowana) i tło z kredowymi rysunkami
     ├── fireworks.js       fajerwerki zwycięzcy
     └── vendor/qrcode.js   generator kodów QR (qrcode-generator, MIT, dołączony bez zmian)
 ```

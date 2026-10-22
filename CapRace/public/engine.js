@@ -210,6 +210,30 @@
     };
   }
 
+  // Kredowe malunki: ozdoba rozmieszczana deterministycznie z seeda toru (obaj gracze widzą to samo), bez wpływu na fizykę.
+  // on: na nawierzchni toru (strzałki jazdy, gwiazdki, buźki, klasy, ślady opon...), poza torem: drobne rysunki na asfalcie przy bandach.
+  const DECOR_ON = ['star', 'smiley', 'hop', 'skid', 'flower', 'spiral', 'sun', 'heart', 'cross', 'arrow'];
+  const DECOR_OFF = ['star', 'smiley', 'hop', 'flower', 'spiral', 'sun', 'heart', 'cross', 'arrow'];
+  function decor(track) {
+    const rnd = mulberry32((track.seed ^ 0x9e3779b9) >>> 0), list = [];
+    const pick = arr => arr[Math.floor(rnd() * arr.length)];
+    const add = (type, s, off, on, r, alpha, turn) => {
+      const p = pointAt(track, s, off);
+      list.push({ type, on, x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10, ang: Math.round((p.ang + turn) * 1000) / 1000, r: Math.round(r), alpha: Math.round(alpha * 100) / 100, seed: Math.floor(rnd() * 1e9) });
+    };
+    add('go', P.startS + 215, 0, true, 22, 0.42, 0);                                                      // napis GO! tuż za startem
+    for (let s = P.startS + 330; s < track.sFinish - 170; s += 220 + rnd() * 240) {
+      const type = pick(DECOR_ON), center = type === 'arrow' || type === 'skid' || type === 'hop';
+      add(type, s, (rnd() * 2 - 1) * (P.halfW - 36) * (center ? 0.3 : 1), true, 14 + rnd() * 9, 0.34 + rnd() * 0.14, type === 'arrow' ? 0 : (rnd() - 0.5) * 1.4);
+    }
+    for (let s = 120; s < track.length - 80; s += 130 + rnd() * 190) {
+      const side = rnd() < 0.5 ? -1 : 1, off = side * (P.halfW + 46 + rnd() * 120), p = pointAt(track, s, off);
+      if (nearest(track, p.x, p.y).d < P.halfW + 38) continue;                                         // nie na torze i nie zbyt blisko bandy
+      add(pick(DECOR_OFF), s, off, false, 22 + rnd() * 20, 0.12 + rnd() * 0.1, rnd() * 6.28);
+    }
+    return list;
+  }
+
   // Który kapsel ma teraz pstrykać: "last" – ten, który jest dalej od mety (przy remisie na zmianę), "alternate" – na zmianę.
   function nextShooter(track, caps, rule, lastShooter, shots) {
     if (rule === 'alternate') return lastShooter === null ? 0 : 1 - lastShooter;
@@ -218,5 +242,5 @@
     return s[0] < s[1] ? 0 : 1;
   }
 
-  return { P, LENGTHS, buildTrack, generateTrack, trackClear, nearest, pointAt, startPositions, progress, shotFromInput, simulate, nextShooter, mulberry32 };
+  return { P, LENGTHS, buildTrack, generateTrack, trackClear, nearest, pointAt, startPositions, progress, shotFromInput, simulate, nextShooter, decor, mulberry32 };
 });

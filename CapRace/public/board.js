@@ -10,7 +10,7 @@ const Board = (function () {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   let W = 300, H = 300, dpr = 1, scale = 1;
-  let track = null, trackKey = '', trackPath = null;
+  let track = null, trackKey = '', trackPath = null, decor = [];
   const caps = [{ x: 0, y: 0, rot: 0 }, { x: 0, y: 0, rot: 0 }];
   let me = 0, turn = null, canAim = false, active = false;
   const cam = { x: 0, y: 0 };
@@ -48,10 +48,10 @@ const Board = (function () {
 
   // ---------- tor ----------
   function setTrack(info) {
-    if (!info) { track = null; trackKey = ''; trackPath = null; return; }
+    if (!info) { track = null; trackKey = ''; trackPath = null; decor = []; return; }
     const key = info.seed + ':' + info.lenKey;
     if (key === trackKey) return;
-    trackKey = key; track = CapEngine.buildTrack(info.seed, info.lenKey);
+    trackKey = key; track = CapEngine.buildTrack(info.seed, info.lenKey); decor = CapEngine.decor(track);
     trackPath = new Path2D();
     for (let i = 0; i < track.n; i++) i ? trackPath.lineTo(track.xs[i], track.ys[i]) : trackPath.moveTo(track.xs[i], track.ys[i]);
     snapCam = true;
@@ -84,6 +84,43 @@ const Board = (function () {
       }
     });
     atTrack(track.sFinish + 62, () => { ctx.fillStyle = 'rgba(244,241,232,0.55)'; ctx.font = 'bold 22px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(t('track.finish'), 0, 0); });
+  }
+
+  // ---------- kredowe malunki (ozdoba, bez wpływu na grę; rozmieszcza je CapEngine.decor z seeda toru) ----------
+  function wobble(seed) { const r = CapEngine.mulberry32(seed); return a => (r() - 0.5) * a; }
+  function line(pts, J, close) {
+    ctx.beginPath();
+    pts.forEach(([x, y], i) => (i ? ctx.lineTo(x + J(2.4), y + J(2.4)) : ctx.moveTo(x + J(2.4), y + J(2.4))));
+    if (close) ctx.closePath();
+    ctx.stroke();
+  }
+  const circle = (cx, cy, r, n) => Array.from({ length: n + 1 }, (_, i) => [cx + Math.cos(i / n * TAU) * r, cy + Math.sin(i / n * TAU) * r]);
+  const CHALK = {
+    arrow(r, J) { line([[-r * 1.3, 0], [r * 0.9, 0]], J); for (const k of [0, -0.6]) line([[r * (0.2 + k), -r * 0.7], [r * (0.95 + k), 0], [r * (0.2 + k), r * 0.7]], J); },
+    star(r, J) { const p = []; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * TAU / 10, q = i % 2 ? r * 0.42 : r; p.push([Math.cos(a) * q, Math.sin(a) * q]); } line(p, J, true); },
+    smiley(r, J) { line(circle(0, 0, r, 22), J); line([[-r * 0.38, -r * 0.3], [-r * 0.38, -r * 0.12]], J); line([[r * 0.38, -r * 0.3], [r * 0.38, -r * 0.12]], J);
+      const m = []; for (let i = 0; i <= 9; i++) { const a = 0.2 * Math.PI + i * 0.6 * Math.PI / 9; m.push([Math.cos(a) * r * 0.58, Math.sin(a) * r * 0.5]); } line(m, J); },
+    hop(r, J) { const q = r * 0.95; for (let i = 0; i < 4; i++) { const x = (i - 1.5) * q; line([[x - q / 2, -q / 2], [x + q / 2, -q / 2], [x + q / 2, q / 2], [x - q / 2, q / 2]], J, true);
+        ctx.fillStyle = ctx.strokeStyle; ctx.font = `bold ${Math.round(q * 0.7)}px "Segoe Print","Bradley Hand","Comic Sans MS",cursive`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(i + 1), x, 1); } },
+    skid(r, J) { for (const side of [-1, 1]) { const p = []; for (let i = 0; i <= 12; i++) { const x = (i / 12 * 2 - 1) * r * 1.9; p.push([x, side * r * 0.4 + Math.sin(x / r * 1.6) * r * 0.3]); } line(p, J); } },
+    flower(r, J) { for (let i = 0; i < 6; i++) { const a = i * TAU / 6; line(circle(Math.cos(a) * r * 0.62, Math.sin(a) * r * 0.62, r * 0.36, 10), J); } line(circle(0, 0, r * 0.22, 8), J); },
+    spiral(r, J) { const p = []; for (let i = 0; i <= 64; i++) { const a = i * 0.34, q = r * i / 64; p.push([Math.cos(a) * q, Math.sin(a) * q]); } line(p, J); },
+    sun(r, J) { line(circle(0, 0, r * 0.5, 16), J); for (let i = 0; i < 10; i++) { const a = i * TAU / 10; line([[Math.cos(a) * r * 0.72, Math.sin(a) * r * 0.72], [Math.cos(a) * r * 1.05, Math.sin(a) * r * 1.05]], J); } },
+    heart(r, J) { const p = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * TAU; p.push([r / 16 * 16 * Math.pow(Math.sin(a), 3), -r / 16 * (13 * Math.cos(a) - 5 * Math.cos(2 * a) - 2 * Math.cos(3 * a) - Math.cos(4 * a))]); } line(p, J, true); },
+    cross(r, J) { line([[-r * 0.8, -r * 0.8], [r * 0.8, r * 0.8]], J); line([[r * 0.8, -r * 0.8], [-r * 0.8, r * 0.8]], J); },
+    go(r, J) { ctx.fillStyle = ctx.strokeStyle; ctx.font = `700 ${Math.round(r * 1.7)}px "Segoe Print","Bradley Hand","Comic Sans MS",cursive`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('GO!', 0, 0); },
+  };
+  function drawDecor(onTrack) {
+    const mx = W / 2 / scale + 140, my = H / 2 / scale + 140;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 3;
+    for (const d of decor) {
+      if (d.on !== onTrack || Math.abs(d.x - cam.x) > mx || Math.abs(d.y - cam.y) > my) continue;       // tylko to, co widać
+      ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.ang);
+      ctx.globalAlpha = d.alpha; ctx.strokeStyle = '#f4f1e8';
+      if (CHALK[d.type]) CHALK[d.type](d.r, wobble(d.seed));
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
   }
 
   // ---------- kapsle ----------
@@ -284,7 +321,9 @@ const Board = (function () {
     if (!track) return;
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (W / 2 - cam.x * scale), dpr * (H / 2 - cam.y * scale));
     ctx.fillStyle = pattern || '#2a2c32'; ctx.fillRect(cam.x - W / 2 / scale, cam.y - H / 2 / scale, W / scale, H / scale);
+    drawDecor(false);
     drawTrack();
+    drawDecor(true);
     const pulse = 0.5 + 0.5 * Math.sin(now / 260);
     const order = [0, 1].sort((a, b) => (a === me) - (b === me));         // własny kapsel na wierzchu
     for (const i of order) {

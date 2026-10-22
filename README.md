@@ -41,7 +41,7 @@ Na innych systemach: `cd WarShips` (albo `cd Dots`, `cd CapRace`), potem `node s
 ### Jak to jest zbudowane
 - Serwery to czysty Node.js (bez `npm install`): statyczne pliki, stan na żywo przez SSE z zapasowym long-pollingiem (działa przez tunel), ruchy przez POST. **Serwer jest sędzią**: sprawdza każdy ruch, a przeciwnik nigdy nie dostaje danych, których nie powinien znać.
 - Zabezpieczenia: 6-literowe kody pokoi z limitem prób, limity żądań na adres IP, Content-Security-Policy, czat tylko jako zwykły tekst, wyłączanie serwera tylko z lokalnego komputera z tajnym tokenem. Zobacz [SECURITY.md](SECURITY.md).
-- Każda gra ma testy: `npm test` w jej folderze (WarShips: 74 testy, Dots: 11 testów silnika i 53 testy serwera, CapRace: 28 testów silnika i 61 testów serwera, TicTacToe: 7 testów).
+- Każda gra ma testy: `npm test` w jej folderze (WarShips: 74 testy, Dots: 11 testów silnika i 53 testy serwera, CapRace: 31 testów silnika i 61 testów serwera, TicTacToe: 7 testów).
 
 ### Ważne
 Gry są przeznaczone do grania ze znajomymi: serwer działa na Twoim komputerze, a tunel Cloudflare „quick” jest tymczasowy i przeznaczony do testów. **Nie są przygotowane do stałego hostowania publicznego** (nie ma kont; każdy, kto zna kod pokoju, może dołączyć jako drugi gracz).
@@ -84,7 +84,7 @@ On other systems: `cd WarShips` (or `cd Dots`, `cd CapRace`), then `node server.
 ### How it is built
 - The servers are plain Node.js (no `npm install`): static files, live state over SSE with a long-polling fallback (works through the tunnel), moves over POST. **The server is the referee**: it validates every move, and your opponent never receives data they should not know.
 - Protections: 6-letter room codes with rate limits, per-IP request limits, a Content-Security-Policy, plain-text-only chat, and a shutdown endpoint reachable only from the local machine with a secret token. See [SECURITY.md](SECURITY.md).
-- Every game has tests: `npm test` in its folder (WarShips: 74 tests, Dots: 11 engine tests and 53 server tests, CapRace: 28 engine tests and 61 server tests, TicTacToe: 7 tests).
+- Every game has tests: `npm test` in its folder (WarShips: 74 tests, Dots: 11 engine tests and 53 server tests, CapRace: 31 engine tests and 61 server tests, TicTacToe: 7 tests).
 
 ### Important
 The games are meant for playing with friends: the server runs on your computer, and the "quick" Cloudflare tunnel is temporary and intended for testing. **They are not hardened for permanent public hosting** (there are no accounts; anyone who knows a room code can join as the second player).

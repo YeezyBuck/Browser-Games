@@ -2,7 +2,7 @@
 
 🇵🇱 [Wersja polska](README.pl.md)
 
-The playground classic, **bottle-cap racing**, for **two players**: on your home network or **over the internet**. Each player has one bottle cap and the two of you race along a **randomly generated track** drawn in chalk on the asphalt. You flick your cap with the mouse (or a finger): **where you hit it** decides the spin and **how far you pull the cursor back** decides the power. The first cap over the finish line wins. The game has a built-in chat, a QR code for joining from a phone, a Polish and English interface, a chalk-doodle background, cheerful music, sound effects and fireworks for the winner.
+The playground classic, **bottle-cap racing**, for **two players**: on your home network or **over the internet**. Each player has one bottle cap and the two of you race along a **randomly generated track** drawn in chalk on the asphalt. You flick your cap with the mouse (or a finger): **where you hit it** decides the spin and **how far you pull the cursor back** decides the power. The first cap over the finish line wins. The game has a built-in chat, a QR code for joining from a phone, a Polish and English interface, chalk drawings on the track and in the background, driving electronic racing music, sound effects and fireworks for the winner.
 
 No libraries to install: all you need is **Node.js**. The server is the referee: it generates the track, computes the physics of every flick and tells both players the result. The game is built on top of [WarShips](../WarShips/README.md) and [Dots](../Dots/README.md) and shares their infrastructure (rooms, Cloudflare tunnel, chat, security).
 
@@ -120,12 +120,12 @@ Good to know: the tunnel address is **temporary** (it changes every time), and t
 | Language | **Polski / English** buttons at the top (remembered) |
 | Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, flicking, spin, track and walls, turns and collisions, tips), in Polish and English; arrow keys and Esc work |
 | Chat | 💬 button at the bottom left; Enter sends, Esc closes; up to 200 characters |
-| Music / effects | 🎵 / 🔊 buttons (remembered); sounds: flick, wall bounce, clink of caps, finish |
+| Music / effects | 🎵 / 🔊 buttons (remembered); music: an original electronic "race" track generated in the browser (about 126 bpm); sounds: flick, wall bounce, clink of caps, finish |
 | Copying the link | **Copy** in the waiting panel or **Copy link** at the top |
 | Quitting the game | **⏻ Quit game** (only in the browser on the computer running the server) |
 | Refreshing the page | does not kick you out: the session is remembered in the tab, and a flight in progress is joined where it is |
 
-The chalk-doodle background is drawn once, without animation. The particle effects and fireworks are turned off if your system has "reduce motion" enabled. On narrow screens the board keeps a minimum scale, so the cap stays big enough to touch.
+The chalk drawings (on the track: arrows, stars, smileys, hopscotch, skid marks, "GO!" after the start; beside it: small doodles on the asphalt) are only decoration: they are placed from the track seed, so both players see the same ones, and they do not affect the physics. The background doodles are drawn once, without animation. The particle effects and fireworks are turned off if your system has "reduce motion" enabled. On narrow screens the board keeps a minimum scale, so the cap stays big enough to touch.
 
 ## 7. Stopping the server
 
@@ -176,7 +176,7 @@ Physics constants (cap size, track width, friction, spin, flick limit) are in th
 cd CapRace
 npm test                 # = node engine.test.js && node test.js
 ```
-- `engine.test.js` (28 tests): the engine: the same seed gives the same track, 450 random tracks (length, no overlapping corridors, smooth curve), the flick input (cancel, clamping, spin sign), the range and the curve of a flick, collisions (momentum, no energy gain, caps never overlap), 1000 random flicks on 40 tracks (the cap never leaves the track), the finish, determinism, and who flicks.
+- `engine.test.js` (31 tests): the engine: the same seed gives the same track, 450 random tracks (length, no overlapping corridors, smooth curve), the flick input (cancel, clamping, spin sign), the range and the curve of a flick, collisions (momentum, no energy gain, caps never overlap), 1000 random flicks on 40 tracks (the cap never leaves the track), the finish, determinism, who flicks, and the chalk drawings (deterministic, on the track and clear of the walls).
 - `test.js` (61 tests): the server over HTTP: rooms and settings, flick validation, the busy lock, both turn rules, the finish, the flick limit, resigning, rematch, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
 
 ## 11. Project structure (for developers)
@@ -196,7 +196,7 @@ CapRace/
     ├── board.js           canvas board: track, caps, camera, minimap, aiming with mouse/touch
     ├── i18n.js            PL/EN translations
     ├── tutorial.js        in-game tutorial: steps and animations (one uses the real engine)
-    ├── music.js, chalk.js cheerful music and the chalk-doodle background
+    ├── music.js, chalk.js electronic racing music (generated) and the chalk-doodle background
     ├── fireworks.js       winner's fireworks
     └── vendor/qrcode.js   QR code generator (qrcode-generator, MIT, bundled unchanged)
 ```

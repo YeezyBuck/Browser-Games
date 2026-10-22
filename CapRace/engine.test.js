@@ -160,4 +160,26 @@ function randomShot() {
   const per = (Date.now() - t) / 20; assert.ok(per < 150, 'zbyt wolno: ' + per + ' ms'); ok(`wydajność: generowanie toru L + pełne pstryknięcie ≈ ${per.toFixed(0)} ms`);
 }
 
+{
+  // kredowe malunki: deterministyczne, na torze i poza nim, bez nakładania na bandy i linię mety
+  const tr = E.generateTrack(555, 'm'), d1 = E.decor(tr), d2 = E.decor(E.buildTrack(tr.seed, 'm'));
+  assert.deepStrictEqual(d1, d2); ok('malunki: ten sam tor daje te same rysunki (klient i serwer zgodni)');
+  assert.notDeepStrictEqual(E.decor(E.generateTrack(556, 'm')), d1);
+  const on = d1.filter(x => x.on), off = d1.filter(x => !x.on);
+  assert.ok(on.length >= 5 && off.length >= 8 && on[0].type === 'go'); ok(`malunki: ${on.length} na torze (pierwszy to GO!), ${off.length} przy bandach`);
+  let bad = 0;
+  for (let i = 0; i < 60; i++) {
+    const t2 = E.generateTrack((rng() * 4294967296) >>> 0, ['s', 'm', 'l'][i % 3]);
+    for (const x of E.decor(t2)) {
+      const q = E.nearest(t2, x.x, x.y);
+      if (!Number.isFinite(x.x + x.y + x.ang + x.r + x.alpha)) bad++;
+      if (x.on && q.d > P.halfW - 20) bad++;                                                               // na torze: wewnątrz nawierzchni
+      if (!x.on && q.d < P.halfW + 38) bad++;                                                              // poza torem: nie nachodzi na bandę
+      if (x.on && (q.s < P.startS + 150 || q.s > t2.sFinish - 150)) bad++;                                 // meta i okolica kapsli na starcie zostają czyste
+      if (x.alpha <= 0 || x.alpha > 0.5 || x.r < 10) bad++;
+    }
+  }
+  assert.strictEqual(bad, 0); ok('malunki na 60 torach: skończone liczby, na nawierzchni, poza bandami, bez mety i okolicy kapsli na starcie');
+}
+
 console.log('\nWszystkie testy silnika przeszły (' + n + ').');

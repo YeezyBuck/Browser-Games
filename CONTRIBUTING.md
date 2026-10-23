@@ -12,7 +12,7 @@ Thanks for your interest! / Dziękuję za zainteresowanie!
   - `cd Dots && npm test`
   - `cd CapRace && npm test`
   - `cd Magnets && npm test`
-  - `cd TicTacToe && node test.js`
+  - `cd TicTacToe && npm test`
 - **Both languages:** every text visible to players exists in Polish and English (`public/i18n.js`, or the `I18N` block in `TicTacToe/index.html`). New texts need both translations; the tests check that the keys match.
 - **Security habits:** the server is the referee, so never trust data from the browser: validate every request on the server. Show player-supplied text only as plain text (never as HTML).
 - **License:** by contributing you agree that your contribution is released under the [MIT license](LICENSE). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -27,7 +27,7 @@ Thanks for your interest! / Dziękuję za zainteresowanie!
   - `cd Dots && npm test`
   - `cd CapRace && npm test`
   - `cd Magnets && npm test`
-  - `cd TicTacToe && node test.js`
+  - `cd TicTacToe && npm test`
 - **Dwa języki:** każdy tekst widoczny dla graczy istnieje po polsku i angielsku (`public/i18n.js` albo blok `I18N` w `TicTacToe/index.html`). Nowe teksty wymagają obu tłumaczeń, a testy sprawdzają zgodność kluczy.
 - **Bezpieczeństwo:** serwer jest sędzią, więc nigdy nie ufaj danym z przeglądarki: sprawdzaj każde żądanie na serwerze. Teksty od graczy wyświetlaj wyłącznie jako zwykły tekst (nigdy jako HTML).
 - **Licencja:** wnosząc zmiany zgadzasz się, że będą udostępnione na [licencji MIT](LICENSE). Obowiązuje [Kodeks postępowania](CODE_OF_CONDUCT.md).

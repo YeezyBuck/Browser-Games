@@ -1,0 +1,23 @@
+{
+  "name": "tictactoe",
+  "version": "1.0.0",
+  "description": "Kółko i krzyżyk: gra z komputerem (sam plik index.html) albo przez sieć dla dwóch osób (serwer)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js --tunnel --open",
+    "local": "node server.js --open",
+    "test": "node test.js && node server.test.js"
+  },
+  "private": true,
+  "license": "MIT",
+  "author": "YeezyBuck",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YeezyBuck/Browser-Games.git",
+    "directory": "TicTacToe"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "homepage": "https://github.com/YeezyBuck/Browser-Games/tree/main/TicTacToe"
+}

@@ -200,7 +200,7 @@ function updateBadge() {
 }
 function renderChat(prevLastId) {
   const box = $('#chat');
-  const show = !!state && state.opponentJoined;
+  const show = !!state && state.opponentJoined && !state.vsBot;     // z komputerem nie ma czatu
   box.hidden = !show;
   if (!show) { if (chatOpen) setChatOpen(false); return; }
   const msgs = state.chat || [];
@@ -350,6 +350,7 @@ function renderGame(s) {
   const me = s.you, opp = 1 - s.you, playing = s.phase === 'playing', over = s.phase === 'over';
   $('#cardYou').className = 'pcard ' + SEAT_COLOR[me] + (playing && !animating && s.turn === me ? ' turn' : '');
   $('#cardOpp').className = 'pcard ' + SEAT_COLOR[opp] + (playing && !animating && s.turn === opp ? ' turn' : '');
+  const who = $('#cardOpp .who'); who.dataset.i18n = s.vsBot ? 'game.bot' : 'game.opp'; who.textContent = t(who.dataset.i18n);
   $('#colYou').textContent = '(' + t('color.' + SEAT_COLOR[me]) + ')';
   $('#colOpp').textContent = '(' + t('color.' + SEAT_COLOR[opp]) + ')';
   $('#shotsYou').textContent = t('game.shots', s.shots[me], s.maxShots);
@@ -391,7 +392,7 @@ function render() {
     $('#chat').hidden = true; setChatOpen(false); chatSeen = null; chatRendered = '';
     return;
   }
-  roomInfo.hidden = false;
+  roomInfo.hidden = !!state.vsBot;                                   // z komputerem nie ma kogo zapraszać
   $('#roomCode').textContent = state.code;
   const s = state;
   if (s.phase === 'waiting') {
@@ -405,7 +406,7 @@ function render() {
   renderGame(s);
   updateAim();
   if (animating) banner(t('banner.rolling'));
-  else if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : 'banner.oppTurn'));
+  else if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : (s.vsBot ? 'banner.botTurn' : 'banner.oppTurn')));
   else { const [text, cls] = resultBanner(s); banner(text, cls); }
   if (s.opponentJoined && !s.opponentConnected && s.phase !== 'over') banner(t('banner.oppGone'), 'warn');
 }
@@ -446,7 +447,7 @@ function onState(s) {
   const prev = state;
   const prevChat = state && state.chat && state.chat.length ? state.chat[state.chat.length - 1].id : (state ? 0 : undefined);
   state = s;
-  Board.setMe(s.you);
+  Board.setMe(s.you); Board.setOppLabel(s.vsBot ? 'game.bot' : 'game.opp');
   const key = s.track ? s.track.seed + ':' + s.track.lenKey : '';
   if (key !== trackKey) {                                           // nowa partia (albo pierwszy stan): nowy tor, kapsle na starcie
     trackKey = key; Board.stopAnim(); animating = false;
@@ -557,9 +558,12 @@ $('#resignBtn').addEventListener('click', () => { if (confirm(t('resign.confirm'
 $('#rematchBtn').addEventListener('click', act('/api/rematch'));
 $('#fireworksBtn').addEventListener('click', () => Fireworks.start());
 
+$('#oppSelect').addEventListener('change', () => { $('#levelRow').hidden = $('#oppSelect').value !== 'bot'; });
 $('#createBtn').addEventListener('click', async () => {
   audio();
-  try { enter(await api('/api/create', { len: $('#lenSelect').value, rule: $('#ruleSelect').value })); } catch (e) { toast(errorText(e)); }
+  const body = { len: $('#lenSelect').value, rule: $('#ruleSelect').value };
+  if ($('#oppSelect').value === 'bot') { body.vs = 'bot'; body.level = $('#levelSelect').value; }
+  try { enter(await api('/api/create', body)); } catch (e) { toast(errorText(e)); }
 });
 $('#joinForm').addEventListener('submit', async ev => {
   ev.preventDefault();

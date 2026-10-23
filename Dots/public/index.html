@@ -38,6 +38,18 @@
           <option value="l" data-i18n="size.l">Duża 30×20</option>
         </select>
       </label>
+      <label class="size-pick"><span data-i18n="lobby.opp">Przeciwnik</span>
+        <select id="oppSelect">
+          <option value="friend" data-i18n="opp.friend" selected>Znajomy (przez sieć)</option>
+          <option value="bot" data-i18n="opp.bot">Komputer</option>
+        </select>
+      </label>
+      <label class="size-pick" id="levelRow" hidden><span data-i18n="lobby.level">Poziom komputera</span>
+        <select id="levelSelect">
+          <option value="easy" data-i18n="level.easy">Łatwy</option>
+          <option value="hard" data-i18n="level.hard" selected>Trudny</option>
+        </select>
+      </label>
       <button id="createBtn" class="primary" type="button" data-i18n="lobby.create">Utwórz grę</button>
     </div>
     <div class="card">

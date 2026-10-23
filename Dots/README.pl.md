@@ -4,7 +4,7 @@
 
 Klasyczne polskie **kropki** (otaczanie) dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gracze na zmianę stawiają kropki na siatce, a zamknięta pętla własnych kropek wokół kropek przeciwnika je przejmuje. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, nocne niebo z konstelacjami w tle, spokojną muzykę, dźwięki i fajerwerki dla zwycięzcy.
 
-Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i pilnuje wszystkich reguł. Gra powstała na bazie [WarShips](../WarShips/README.pl.md) i ma tę samą infrastrukturę (pokoje, tunel Cloudflare, czat, zabezpieczenia).
+Można grać **ze znajomym** albo **z komputerem** (poziom łatwy lub trudny). Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i pilnuje wszystkich reguł. Gra powstała na bazie [WarShips](../WarShips/README.pl.md) i ma tę samą infrastrukturę (pokoje, tunel Cloudflare, czat, zabezpieczenia).
 
 <p align="center">
   <img src="../docs/screenshots/dots-capture.jpg" width="48%" alt="Dots: przejęcie kropki przeciwnika">
@@ -85,6 +85,8 @@ Potrzebujesz dwóch osób (albo dwóch kart przeglądarki, żeby spróbować sam
 2. Wybierz **rozmiar planszy** i kliknij **Utwórz grę**. Pojawi się **6-literowy kod gry** i gotowe linki do przekazania przeciwnikowi (🌐 przez internet razem z kodem QR, 🏠 w sieci domowej).
 3. Wyślij znajomemu odpowiedni link (**Kopiuj**) i poczekaj, aż dołączy.
 
+**Gra z komputerem:** w tym samym panelu ustaw **Przeciwnik: Komputer** i wybierz **poziom** (łatwy albo trudny). Gra startuje od razu: nie ma kodu, linku, kodu QR ani czatu, a komputer zawsze zgadza się na rewanż. Gdy zaproponujesz zakończenie gry i policzenie punktów, komputer zgodzi się, jeśli nie przegrywa, a w przeciwnym razie odmówi.
+
 ### Gracz 2 – dołącza
 Otwórz link od gracza 1 (kod wpisze się sam) albo otwórz stronę gry, wpisz kod w polu **Dołącz do gry** i kliknij **Dołącz**. Telefonem możesz zeskanować kod QR.
 
@@ -117,6 +119,7 @@ Dobrze wiedzieć: adres tunelu jest **tymczasowy** (zmienia się przy każdym ur
 | Rewanż | **Zagraj ponownie** po końcu gry |
 | Zmiana języka | przyciski **Polski / English** u góry (zapamiętywane) |
 | Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, łączenie, przejmowanie, pola zablokowane, koniec gry, wskazówki), po polsku i angielsku; działają strzałki i Esc |
+| Przeciwnik komputerowy | **Przeciwnik: Komputer** przy tworzeniu gry, poziom **Łatwy** albo **Trudny**; komputer chwilę „myśli” przed każdym ruchem |
 | Czat | przycisk 💬 w lewym dolnym rogu; Enter wysyła, Esc zamyka; do 200 znaków |
 | Muzyka / efekty | przyciski 🎵 / 🔊 (zapamiętywane); dźwięki: postawienie kropki, przejęcie, koniec gry |
 | Kopiowanie linku | **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
@@ -159,6 +162,7 @@ Animacje (tło, efekty przejęć, fajerwerki) są wyłączone, jeśli system ma 
 
 Rozmiary plansz zmienisz w `server.js` (stała `SIZES`), a limity w obiekcie `LIMITS`.
 
+- **Komputer gra według tych samych zasad:** działa na serwerze i stawia kropki tą samą, sprawdzaną drogą co ruch człowieka, a widzi tylko planszę, jak człowiek. Jego token nigdy nie trafia do przeglądarki.
 - **Serwer rozstrzyga o wszystkim:** każdy ruch jest sprawdzany na serwerze przez silnik gry; klient niczego nie może oszukać. Silnik (`engine.js`) nie jest udostępniany przeglądarkom.
 - **Kod pokoju 6-literowy**, limit prób dołączenia (12/min na IP), limit zakładania pokoi (10/10 min na IP), max 300 pokoi, limit żądań (600/min na IP), limit ruchów (8/s na gracza), limit połączeń na żywo; pokoje wygasają po 3 h bezczynności.
 - **Czat:** do 200 znaków, 6 wiadomości na 10 s, tylko zwykły tekst (bez HTML), usuwane znaki sterujące i niewidoczne.
@@ -171,16 +175,19 @@ Rozmiary plansz zmienisz w `server.js` (stała `SIZES`), a limity w obiekcie `LI
 
 ```
 cd Dots
-npm test                 # = node engine.test.js && node test.js
+npm test                 # = node engine.test.js && node bot.test.js && node test.js
 ```
+- `bot.test.js` (10 testów): przeciwnik komputerowy: każda decyzja to legalny ruch, szybkość (najwyżej ok. 0,1 s), trudny zamyka pętlę i przejmuje, gdy może, oraz zagradza pole, w którym rywal by przejął, łatwy zwykle przejmuje, ale rzadko się broni, trudny wygrywa z łatwym w 12 z 12 partii (ustalone ziarna), determinizm i odpowiedź na propozycję zakończenia gry.
 - `engine.test.js` (11 testów): reguły gry: przejęcie rombem, luka w pętli, blokowanie obszaru, brzeg planszy, zakaz samobójstwa i jego wyjątek, koniec gry oraz 12 losowych partii ze sprawdzaniem niezmienników.
-- `test.js` (53 testy): serwer przez HTTP: pokoje i rozmiary, ruchy i walidacja, przejęcie, propozycje zakończenia, poddanie, remis, rewanż, koniec przez brak ruchów, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
+- `test.js` (64 testy): serwer przez HTTP: pokoje i rozmiary, pokój z komputerem (natychmiastowy start, brak czatu, komputer rusza sam, odpowiada na propozycje zakończenia, rewanż), ruchy i walidacja, przejęcie, propozycje zakończenia, poddanie, remis, rewanż, koniec przez brak ruchów, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
 
 ## 11. Budowa projektu (dla programistów)
 
 ```
 Dots/
 ├── engine.js              silnik gry (czyste funkcje): przejęcia, blokady, samobójstwo, koniec gry
+├── bot.js                 przeciwnik komputerowy (po stronie serwera): ocenia każdy ruch silnikiem, na poziomie trudnym patrzy dwa ruchy w przód
+├── bot.test.js            testy przeciwnika komputerowego
 ├── engine.test.js         testy silnika
 ├── server.js              serwer HTTP: pokoje, kolejka, limity, tunel, zamykanie (bez zależności)
 ├── test.js                test integracyjny serwera
@@ -198,13 +205,15 @@ Dots/
     └── vendor/qrcode.js   generator kodów QR (qrcode-generator, MIT, bez zmian)
 ```
 
+**Przeciwnik komputerowy (`bot.js`).** Silnik potrafi tanio sprawdzić każdy ruch (`tryMove` zwraca nową planszę i przejęte kropki), więc komputer ocenia każde puste pole przy kropkach: ile kropek ten ruch przejmie, ile kropek przejąłby tam przeciwnik (zajęcie pola zagradza mu pętlę) i trochę za kształt (sąsiedzi własnych kropek). Poziom **trudny** patrzy dla najlepszych kandydatów jeszcze jeden ruch dalej: odejmuje to, co przeciwnik mógłby przejąć w odpowiedzi, i nagradza stworzenie dwóch różnych gróźb przejęcia naraz (przeciwnik zagrodzi tylko jedną). Poziom **łatwy** przejmuje, gdy widzi przejęcie (w ok. 80% ruchów), a w przeciwnym razie stawia kropkę przy innych kropkach i się nie broni.
+
 **Jak to działa.** Serwer trzyma stan pokoi w pamięci. Klient wysyła ruchy zwykłymi żądaniami POST i odbiera zmiany strumieniem **SSE** (a gdy strumień nie dociera, np. przez tunel, przełącza się na **long-polling**). Wynik pętli (otoczenie) liczony jest przez wypełnianie z zewnątrz planszy w 4 kierunkach z omijaniem żywych kropek danego koloru: pola, do których nie da się dojść, są otoczone.
 
 **Interfejs HTTP:**
 
 | Metoda i adres | Opis |
 |---|---|
-| `POST /api/create` (`{size: s/m/l}`), `/api/join` | założenie pokoju i dołączenie (kod → token gracza) |
+| `POST /api/create` (`{size: s/m/l, vs: friend/bot, level: easy/hard}`), `/api/join` | założenie pokoju i dołączenie (kod → token gracza) |
 | `POST /api/move` (`{x, y}`) | postawienie kropki |
 | `POST /api/offer` (`{action: offer/accept/reject/cancel}`), `/api/resign`, `/api/rematch` | zakończenie za zgodą, poddanie, rewanż |
 | `POST /api/chat` | wiadomość czatu |

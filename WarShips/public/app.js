@@ -437,7 +437,7 @@ function updateBadge() {
 }
 function renderChat(prevLastId) {
   const box = $('#chat');
-  const show = !!state && state.opponentJoined;
+  const show = !!state && state.opponentJoined && !state.vsBot;     // z komputerem nie ma czatu
   box.hidden = !show;
   if (!show) { if (chatOpen) setChatOpen(false); return; }
   const msgs = state.chat || [];
@@ -589,7 +589,7 @@ function render() {
     $('#chat').hidden = true; setChatOpen(false); chatSeen = null; chatRendered = '';
     return;
   }
-  info.hidden = false;
+  info.hidden = !!state.vsBot;                                       // z komputerem nie ma kogo zapraszać
   $('#roomCode').textContent = state.code;
   const s = state;
   const warn = s.opponentJoined && !s.opponentConnected;
@@ -605,7 +605,7 @@ function render() {
   } else {
     show('game');
     renderGame();
-    if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : 'banner.oppTurn'));
+    if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : (s.vsBot ? 'banner.botTurn' : 'banner.oppTurn')));
     else if (s.winner === s.you) banner(t('banner.win'), 'win');
     else banner(t('banner.lose'), 'lose');
   }
@@ -720,9 +720,11 @@ function enter(sess) {
   connect();
 }
 
+$('#oppSelect').addEventListener('change', () => { $('#levelRow').hidden = $('#oppSelect').value !== 'bot'; });
 $('#createBtn').addEventListener('click', async () => {
   audio();
-  try { enter(await api('/api/create')); } catch (e) { toast(errorText(e)); }
+  const body = $('#oppSelect').value === 'bot' ? { vs: 'bot', level: $('#levelSelect').value } : {};
+  try { enter(await api('/api/create', body)); } catch (e) { toast(errorText(e)); }
 });
 $('#joinForm').addEventListener('submit', async ev => {
   ev.preventDefault();

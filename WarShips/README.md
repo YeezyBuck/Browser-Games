@@ -4,7 +4,7 @@
 
 The classic Battleships game for **two players**: on your home network or **over the internet**. It has a built-in chat, a QR code for joining from a phone, Polish and English interface, an animated background with pirate ships fighting each other, music, and the sounds *boom* (hit), *splash* (miss) and a heavy multi-part explosion when a ship is sunk. Hits show explosions on the ship, and the winner gets fireworks.
 
-No libraries to install: all you need is **Node.js**. The server acts as the referee and never sends your opponent the positions of your ships.
+You can play **against a friend** or **against the computer** (easy or hard). No libraries to install: all you need is **Node.js**. The server acts as the referee and never sends your opponent the positions of your ships.
 
 <p align="center">
   <img src="../docs/screenshots/warships-battle.jpg" width="48%" alt="WarShips: an explosion on a hit ship">
@@ -96,6 +96,8 @@ You need two people (or two browser tabs to try it out alone).
    - 🏠 **Opponent on the same Wi-Fi/LAN**.
 4. Send your friend the right link (use the **Copy** button) and wait for them to join.
 
+**Playing against the computer:** on the start screen set **Opponent: Computer** and pick the **level** (easy or hard). You go straight to placing your ships (the computer has already placed its fleet), and the game starts as soon as you click **Ready**. There is no code, link, QR code or chat, and the computer always agrees to a rematch.
+
 ### Player 2 – joins
 - open the link from player 1 (the code fills in automatically), **or**
 - open the game address, type the 6-letter code into **Join a game** and click **Join**.
@@ -172,6 +174,7 @@ After installing, open a new terminal window. (The server also checks the typica
 |---|---|
 | Language | **Polski / English** buttons at the top; the choice is remembered (default follows the browser language) |
 | Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, fleet, placing, firing, sinking, extras), in Polish and English; arrow keys and Esc work |
+| Computer opponent | **Opponent: Computer** when creating a game, level **Easy** or **Hard**; the computer thinks for a moment before each shot |
 | Chat | 💬 button at the bottom left (after the opponent joins); Enter sends, Esc closes; red badge = unread; up to 200 characters |
 | Music | 🎵 button mutes/unmutes; starts after the first click on the page (browser requirement) |
 | Sound effects (boom, splash, ship-sunk explosion, chat beep) | 🔊 button |
@@ -227,6 +230,7 @@ Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code
 - **6-letter room code** (about 190 million combinations) and a limit on join attempts (12/min per IP address).
 - **Per-IP limits:** 600 requests/min, 10 new rooms per 10 min, 8 live connections; at most 300 rooms on the server; rooms expire after 3 hours of inactivity.
 - **Chat:** up to 200 characters, 6 messages per 10 s, shown as plain text (no HTML), control and invisible characters removed.
+- **The computer opponent plays by the same rules:** it runs on the server, places its fleet and fires through the same checked path as a human, and it only sees what a human sees (the results of its own shots and the ships it has sunk), never your fleet. Its token never reaches the browser.
 - **The server decides everything:** you only learn the ship positions after the game ends; all moves are validated on the server.
 - **Security headers:** Content-Security-Policy (own scripts only), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 - **Behind the tunnel** the real client address is taken from the Cloudflare header only for connections coming from this computer. Home-network addresses are shown to the host only.
@@ -238,15 +242,17 @@ Constants in `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (code
 
 ```
 cd WarShips
-node test.js        # or: npm test
+npm test            # = node bot.test.js && node test.js
 ```
-The test starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling, the QR library, the tunnel and cloudflared installation (using stand-in programs) and shutting down. At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
+`bot.test.js` (10 tests) checks the computer opponent: its fleets obey the rules (300 random fleets), it never fires outside the board or twice at the same cell, it finishes off a hit ship and does not waste shots next to a sunk one, it does not use the opponent's fleet at all, and strength (hard sinks a fleet in about 55 shots, easy in about 70; hard wins 188 of 200 games against easy). `test.js` starts the server on a free port and plays a complete game with two "players" over HTTP. It checks, among other things: fleet validation, turn order, hidden ships, rematch, chat, limits, long-polling, the QR library, the tunnel and cloudflared installation (using stand-in programs) and shutting down. At the end it prints `Wszystkie testy przeszły (N)` ("All tests passed (N)").
 
 ## 12. Project structure (for developers)
 
 ```
 WarShips/
 ├── server.js            HTTP server: game rules, rooms, limits, tunnel (no dependencies)
+├── bot.js               the computer opponent (server side): random fleet, probability-based shooting
+├── bot.test.js          computer opponent tests
 ├── test.js              integration test (node test.js)
 ├── package.json         scripts: start, tunnel, test
 ├── uruchom.bat              main start (Windows): cloudflared → tunnel → game → browser
@@ -264,13 +270,15 @@ WarShips/
     └── vendor/qrcode.js QR code generator (qrcode-generator, MIT license, bundled unchanged)
 ```
 
+**The computer opponent (`bot.js`).** The computer places a random fleet that obeys the rules. When shooting it knows only what a human knows. The **hard** level counts, for every unknown cell, how many of the ships still afloat could lie across it (respecting the rule that ships do not touch, and weighting layouts that fit the unresolved hits much more strongly), so it finishes off a ship efficiently and skips cells next to sunk ships. The **easy** level hunts at random and follows a hit most of the time, without any counting.
+
 **How it works.** The server keeps room state in memory and is the single source of truth. The client sends commands as plain POST requests and receives state changes through an **SSE** stream. If the stream does not arrive within 3 s (e.g. through a tunnel), it switches to **long-polling** (`/api/poll`). Each player receives only their own view of the state.
 
 **HTTP interface:**
 
 | Method and address | Description |
 |---|---|
-| `POST /api/create`, `/api/join` | create a room and join it (code → player token) |
+| `POST /api/create` (`{vs: friend/bot, level: easy/hard}`), `/api/join` | create a room and join it (code → player token) |
 | `POST /api/place`, `/api/shoot`, `/api/rematch` | place the fleet, fire a shot, rematch |
 | `POST /api/chat` | chat message |
 | `POST /api/shutdown` | shut down the server and tunnel (local computer only, needs the secret token) |

@@ -12,6 +12,7 @@ const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
 const net = require('net');
 const E = require('./engine');
+const Bot = require('./bot');
 
 const PORT = Number(process.env.PORT) || 3100;
 const SIZES = { s: [15, 15], m: [20, 20], l: [30, 20] };   // liczba przecięć siatki: kolumny x wiersze
@@ -113,6 +114,7 @@ function resign(room, pi) {
 function rematch(room, pi) {
   if (room.phase !== 'over') return 'not_over';
   room.players[pi].rematch = true;
+  if (room.bot) room.players[room.bot.seat].rematch = true;               // komputer zawsze zgadza się na rewanż
   if (room.players.length === 2 && room.players.every(p => p.rematch)) startGame(room, 1 - room.starter);   // zaczyna drugi gracz
   return null;
 }
@@ -121,7 +123,39 @@ function rematch(room, pi) {
 function isOnline(room, pi) {
   const p = room.players[pi];
   if (!p) return false;
+  if (room.bot && room.bot.seat === pi) return true;                       // komputer jest zawsze "na linii"
   return p.conns.size > 0 || (room.waiters || []).some(w => w.pi === pi) || Date.now() - p.seen < LIMITS.presenceMs;
+}
+
+// ---------- komputer jako drugi gracz ----------
+// Pokój z botem ma od razu dwóch graczy: człowiek (miejsce 0) i komputer (miejsce 1, token nieznany nikomu). Bot stawia kropki tą samą
+// funkcją move() co człowiek, więc nie może oszukiwać; widzi tylko planszę. Decyzje liczy bot.js. Na propozycję zakończenia gry
+// i policzenia punktów komputer odpowiada zgodą, gdy nie przegrywa (inaczej odmawia), a sam jej nigdy nie składa.
+const BOT_LEVELS = ['easy', 'hard'];
+function addBot(room, level) {
+  const bot = newPlayer(crypto.randomBytes(16).toString('hex'));
+  bot.bot = true; room.players.push(bot); room.bot = { seat: 1, level };
+}
+function maybeBot(room) {
+  if (!room.bot || room.botTimer || room.phase !== 'playing') return;
+  const seat = room.bot.seat, answering = room.endOffer === 1 - seat;
+  if (!answering && room.turn !== seat) return;
+  room.botTimer = setTimeout(() => { room.botTimer = null; botTurn(room); }, (answering ? 900 : 700) + Math.random() * 800);
+  if (room.botTimer.unref) room.botTimer.unref();
+}
+function botTurn(room) {
+  if (!room.bot || rooms.get(room.code) !== room || room.phase !== 'playing' || room.closed) return;
+  const seat = room.bot.seat, color = room.colors[seat];
+  if (room.endOffer === 1 - seat) {                                                              // człowiek proponuje koniec: odpowiadamy
+    offer(room, seat, Bot.answerOffer(room.game, color) ? 'accept' : 'reject');
+    broadcast(room); maybeBot(room); return;
+  }
+  if (room.turn !== seat) return;
+  let r = { error: 'none' };
+  try { const m = Bot.chooseMove(room.game, color, room.bot.level); if (m) r = move(room, seat, m.x, m.y); } catch (e) { /* awaryjnie: pierwsze legalne pole poniżej */ }
+  if (r.error) outer: for (let y = 0; y < room.game.h; y++) for (let x = 0; x < room.game.w; x++) if (!move(room, seat, x, y).error) break outer;
+  broadcast(room);
+  maybeBot(room);
 }
 
 // ---------- stan widoczny dla konkretnego gracza ----------
@@ -148,6 +182,7 @@ function viewFor(room, pi) {
     v: room.version || 0,
     chat: (room.chat || []).slice(-50),
     closed: !!room.closed,
+    vsBot: !!room.bot, botLevel: room.bot ? room.bot.level : null,
     youWantRematch: room.players[pi].rematch,
     opponentWantsRematch: !!opp && opp.rematch,
     last: room.last,
@@ -174,7 +209,7 @@ function cleanChat(text) {
 }
 
 function chat(room, pi, text) {
-  if (room.players.length < 2) return 'no_opponent';
+  if (room.players.length < 2 || room.bot) return 'no_opponent';
   const msg = cleanChat(text);
   if (!msg || [...msg].length > LIMITS.chatMaxLen) return 'chat_invalid';
   if (!allow('chat', room.code + ':' + pi, LIMITS.chatPer10s, 10000)) return 'rate_limited';
@@ -484,9 +519,13 @@ const server = http.createServer(async (req, res) => {
         const sizeKey = body.size === undefined ? DEFAULT_SIZE : body.size;
         if (typeof sizeKey !== 'string' || !Object.prototype.hasOwnProperty.call(SIZES, sizeKey)) return fail(res, 400, 'bad_request');
         const room = { code: makeCode(), sizeKey, phase: 'waiting', game: null, colors: null, turn: null, winner: null, draw: false, reason: null, endOffer: null, starter: 0, last: null, seq: 0, chat: [], chatSeq: 0, updated: Date.now(), players: [] };
+        const vs = body.vs === undefined ? 'friend' : body.vs, level = body.level === undefined ? 'hard' : body.level;
+        if (vs !== 'friend' && vs !== 'bot') return fail(res, 400, 'bad_request');
+        if (vs === 'bot' && !BOT_LEVELS.includes(level)) return fail(res, 400, 'bad_request');
         const token = crypto.randomBytes(16).toString('hex');
         room.players.push(newPlayer(token));
         rooms.set(room.code, room);
+        if (vs === 'bot') { addBot(room, level); startGame(room, crypto.randomInt(2)); maybeBot(room); }      // z komputerem gra zaczyna się od razu
         return sendJson(res, 200, { code: room.code, token, you: 0 });
       }
       if (p === '/api/join') {
@@ -513,12 +552,14 @@ const server = http.createServer(async (req, res) => {
         const r = move(a.room, a.pi, body.x, body.y);
         if (r.error) return fail(res, r.error === 'rate_limited' ? 429 : 400, r.error);
         broadcast(a.room);
+        maybeBot(a.room);
         return sendJson(res, 200, r);
       }
       if (p === '/api/offer') {
         const err = offer(a.room, a.pi, body.action);
         if (err) return fail(res, 400, err);
         broadcast(a.room);
+        maybeBot(a.room);
         return sendJson(res, 200, { ok: true });
       }
       if (p === '/api/resign') {
@@ -531,6 +572,7 @@ const server = http.createServer(async (req, res) => {
         const err = rematch(a.room, a.pi);
         if (err) return fail(res, 400, err);
         broadcast(a.room);
+        maybeBot(a.room);
         return sendJson(res, 200, { ok: true });
       }
       return fail(res, 404, 'unknown_cmd');
@@ -544,7 +586,7 @@ const server = http.createServer(async (req, res) => {
 
 setInterval(() => {
   const now = Date.now();
-  for (const [code, room] of rooms) if (now - room.updated > ROOM_TTL_MS) rooms.delete(code);
+  for (const [code, room] of rooms) if (now - room.updated > ROOM_TTL_MS) { clearTimeout(room.botTimer); rooms.delete(code); }
 }, 10 * 60 * 1000).unref();
 
 // Zmiana obecności gracza (np. long-poll przestał pukać) wysyłana do drugiego gracza.
@@ -641,4 +683,4 @@ if (require.main === module) {
   main().catch(e => { console.log('Błąd uruchamiania:', e.message); process.exit(1); });
 }
 
-module.exports = { server, hooks, waitForTunnel, checkPortFree, findCloudflared, pickInstaller, cleanChat, SIZES, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };
+module.exports = { server, hooks, BOT_LEVELS, rooms, waitForTunnel, checkPortFree, findCloudflared, pickInstaller, cleanChat, SIZES, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };

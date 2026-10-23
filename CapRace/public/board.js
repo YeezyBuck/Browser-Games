@@ -16,7 +16,7 @@ const Board = (function () {
   const cam = { x: 0, y: 0 };
   let anim = null, drag = null, particles = [], raf = 0, last = 0, pattern = null;
   let onShoot = null, onEvent = null, onWeak = null;
-  let focusSeat = 0, snapCam = true;
+  let focusSeat = 0, snapCam = true, oppKey = 'game.opp';
 
   // ---------- pomocnicze ----------
   function shade(hex, amt) {
@@ -334,7 +334,7 @@ const Board = (function () {
       }
       drawCap(c, i);
     }
-    if (!drag) for (const i of [0, 1]) drawLabel(caps[i], t(i === me ? 'game.you' : 'game.opp'), i, caps[i].y <= caps[1 - i].y);
+    if (!drag) for (const i of [0, 1]) drawLabel(caps[i], t(i === me ? 'game.you' : oppKey), i, caps[i].y <= caps[1 - i].y);
     if (drag) drawAim();
     drawParticles(dt);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -350,6 +350,7 @@ const Board = (function () {
   return {
     setTrack, setCaps, play, stopAnim,
     setMe(i) { me = i; },
+    setOppLabel(key) { oppKey = key; },
     setTurn(i) { turn = i; if (i !== null && i !== undefined) focusSeat = i; },
     setFocus(i) { focusSeat = i; },
     setCanAim(b) { canAim = b; cv.classList.toggle('can-aim', !!b && !drag); if (!b && drag) endDrag(false); },

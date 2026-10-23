@@ -153,6 +153,34 @@ async function main() {
   assert.strictEqual(rs.phase, 'playing'); assert.deepStrictEqual(rs.field, []); assert.deepStrictEqual(rs.taken, [0, 0]); assert.strictEqual(rs.lastId, 0); assert.strictEqual(rs.hands[0].length, 10); assert.strictEqual(rs.hands[1].length, 10); assert.strictEqual(rs.turn, 1 - Q.first); assert.notStrictEqual(rs.seed, oldSeed); ok('rewanż: puste pole, 10 magnesów każdy, nowe kształty, zaczyna drugi gracz');
   assert.strictEqual((await post('/api/rematch', Q.P[0])).body.code, 'not_over');
 
+  // ---------- komputer jako przeciwnik ----------
+  for (const bad of [{ vs: 'x' }, { vs: 5 }, { vs: 'bot', level: 'zz' }, { vs: 'bot', level: 7 }, { vs: 'bot', level: '__proto__' }, { vs: null }]) assert.strictEqual((await post('/api/create', bad)).status, 400);
+  ok('nieprawidłowy przeciwnik lub poziom komputera odrzucony (także __proto__)');
+  const botRoom = async (level, extra) => { const c = (await post('/api/create', Object.assign({ vs: 'bot', level }, extra || {}))).body; const P = { code: c.code, token: c.token }; return { P, st: async () => (await get(`/api/state?code=${P.code}&token=${P.token}`)).body, room: rooms.get(c.code) }; };
+  const BR = await botRoom('easy', { field: 's' });
+  let bst = await BR.st();
+  assert.strictEqual(bst.vsBot, true); assert.strictEqual(bst.botLevel, 'easy'); assert.strictEqual(bst.phase, 'playing'); assert.strictEqual(bst.opponentJoined, true); assert.strictEqual(bst.opponentConnected, true); assert.strictEqual(bst.you, 0); ok('pokój z komputerem: gra startuje od razu, przeciwnik jest dołączony i zawsze "na linii"');
+  assert.strictEqual((await post('/api/join', { code: BR.P.code })).body.code, 'room_full'); ok('do pokoju z komputerem nikt trzeci nie dołączy');
+  assert.strictEqual((await post('/api/chat', Object.assign({ text: 'hej' }, BR.P))).body.code, 'no_opponent'); ok('z komputerem nie ma czatu');
+  assert.ok(!JSON.stringify(bst).includes(BR.room.players[1].token)); ok('token komputera nigdy nie trafia do gracza');
+  const tb0 = Date.now();
+  if (bst.turn === 1) assert.ok(await (async () => { for (let k = 0; k < 120; k++) { bst = await BR.st(); if (bst.lastId >= 1) return true; await sleep(100); } return false; })(), 'bot zaczynający nie ruszył');
+  else {
+    assert.strictEqual((await post('/api/place', Object.assign({ id: bst.hands[0][0], x: 80, y: 80, a: 0.4 }, BR.P))).status, 200);
+    assert.ok(await (async () => { for (let k = 0; k < 150; k++) { bst = await BR.st(); if (bst.lastId >= 2 && bst.turn === 0) return true; await sleep(100); } return false; })(), 'bot nie odpowiedział ruchem');
+  }
+  assert.ok(bst.taken[1] >= 1 && bst.last && bst.last.by === 1 && bst.last.placed.owner === 1); ok(`komputer sam stawia magnes po chwili namysłu (${((Date.now() - tb0) / 1000).toFixed(1)} s), a ruch trafia do gracza jak każdy inny`);
+  assert.ok(Date.now() - tb0 >= 700); ok('komputer nie odpowiada natychmiast (jest przerwa na odtworzenie ruchu i "namysł")');
+  BR.room.busyUntil = 0; assert.strictEqual((await post('/api/resign', BR.P)).status, 200); assert.strictEqual((await BR.st()).phase, 'over');
+  assert.strictEqual((await post('/api/rematch', BR.P)).status, 200); bst = await BR.st();
+  assert.strictEqual(bst.phase, 'playing'); assert.strictEqual(bst.lastId, 0); ok('rewanż z komputerem startuje od razu po jednym kliknięciu (komputer zgadza się zawsze)');
+  clearTimeout(BR.room.botTimer);
+  const HR = await botRoom('hard'); let hst = await HR.st();
+  assert.strictEqual(hst.botLevel, 'hard');
+  if (hst.turn === 0) assert.strictEqual((await post('/api/place', Object.assign({ id: hst.hands[0][1], x: 100, y: 90, a: 1 }, HR.P))).status, 200);
+  assert.ok(await (async () => { for (let k = 0; k < 150; k++) { hst = await HR.st(); if (hst.taken[1] >= 1) return true; await sleep(100); } return false; })(), 'trudny bot nie ruszył'); ok('trudny komputer też odpowiada');
+  clearTimeout(HR.room.botTimer);
+
   // ---------- long-poll ----------
   LIMITS.pollMs = 400;
   const LP = await newRoom({});

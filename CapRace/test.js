@@ -144,6 +144,38 @@ async function main() {
   for (const k of LENGTHS) { const x = await newRoom({ len: k }); const s = await x.st(0), t2 = E.buildTrack(s.track.seed, k); assert.ok(t2.length > E.LENGTHS[k] * 0.95 && t2.length < E.LENGTHS[k] + 500); }
   ok('długości toru S/M/L zgodne z ustawieniem');
 
+  // ---------- komputer jako przeciwnik ----------
+  for (const bad of [{ vs: 'x' }, { vs: 5 }, { vs: 'bot', level: 'zz' }, { vs: 'bot', level: 7 }, { vs: 'bot', level: '__proto__' }, { vs: null }]) assert.strictEqual((await post('/api/create', bad)).status, 400);
+  ok('nieprawidłowy przeciwnik lub poziom komputera odrzucony (także __proto__)');
+  const botRoom = async (level, extra) => { const c = (await post('/api/create', Object.assign({ vs: 'bot', level }, extra || {}))).body; const P = { code: c.code, token: c.token }; return { P, st: async () => (await get(`/api/state?code=${P.code}&token=${P.token}`)).body, shoot: (px, py) => post('/api/shoot', Object.assign({ hx: 0, hy: 0, px, py }, P)), room: rooms.get(c.code) }; };
+  const BR = await botRoom('easy', { rule: 'alternate', len: 's' });
+  let bs = await BR.st();
+  assert.strictEqual(bs.vsBot, true); assert.strictEqual(bs.botLevel, 'easy'); assert.strictEqual(bs.phase, 'playing'); assert.strictEqual(bs.opponentJoined, true); assert.strictEqual(bs.opponentConnected, true); assert.strictEqual(bs.you, 0); ok('pokój z komputerem: gra startuje od razu, przeciwnik jest dołączony i zawsze "na linii"');
+  assert.strictEqual((await post('/api/join', { code: BR.P.code })).body.code, 'room_full'); ok('do pokoju z komputerem nikt trzeci nie dołączy');
+  assert.strictEqual((await post('/api/chat', Object.assign({ text: 'hej' }, BR.P))).body.code, 'no_opponent'); ok('z komputerem nie ma czatu');
+  assert.ok(!JSON.stringify(bs).includes(BR.room.players[1].token)); ok('token komputera nigdy nie trafia do gracza');
+  const t0 = Date.now();
+  if (bs.turn === 1) { assert.ok(await (async () => { for (let k = 0; k < 80; k++) { bs = await BR.st(); if (bs.shotId >= 1) return true; await sleep(100); } return false; })(), 'bot zaczynający nie ruszył'); }
+  else {
+    assert.strictEqual((await BR.shoot(-60, 0)).status, 200);
+    assert.ok(await (async () => { for (let k = 0; k < 120; k++) { bs = await BR.st(); if (bs.shotId >= 2 && bs.turn === 0) return true; await sleep(100); } return false; })(), 'bot nie odpowiedział pstryknięciem');
+  }
+  assert.ok(bs.shots[1] >= 1 && bs.shot && bs.shot.by === 1); ok(`komputer sam wykonuje swoje pstryknięcie po chwili namysłu (${((Date.now() - t0) / 1000).toFixed(1)} s) i trajektoria trafia do gracza jak każda inna`);
+  assert.ok(Date.now() - t0 >= 600); ok('komputer nie odpowiada natychmiast (jest przerwa na odtworzenie lotu i "namysł")');
+  assert.strictEqual((await post('/api/shoot', Object.assign({ hx: 0, hy: 0, px: -60, py: 0 }, BR.P))).body.code === 'busy' || bs.turn === 0, true);
+  // poddanie i rewanż: komputer zawsze się zgadza
+  BR.room.busyUntil = 0; assert.strictEqual((await post('/api/resign', BR.P)).status, 200);
+  assert.strictEqual((await BR.st()).phase, 'over');
+  assert.strictEqual((await post('/api/rematch', BR.P)).status, 200); bs = await BR.st();
+  assert.strictEqual(bs.phase, 'playing'); assert.strictEqual(bs.shotId, 0); ok('rewanż z komputerem startuje od razu po jednym kliknięciu (komputer zgadza się zawsze)');
+  clearTimeout(BR.room.botTimer);
+  // trudny: odpowiada, a gra się nie zacina także na zasadzie "kto z tyłu"
+  const HR = await botRoom('hard'); let hs = await HR.st();
+  assert.strictEqual(hs.botLevel, 'hard'); const t1 = Date.now();
+  if (hs.turn === 0) { assert.strictEqual((await HR.shoot(-40, 0)).status, 200); }
+  assert.ok(await (async () => { for (let k = 0; k < 150; k++) { hs = await HR.st(); if (hs.shots[1] >= 1) return true; await sleep(100); } return false; })(), 'trudny bot nie ruszył'); ok('trudny komputer też odpowiada (zasada "kto z tyłu")');
+  clearTimeout(HR.room.botTimer);
+
   // ---------- long-poll ----------
   LIMITS.pollMs = 400;
   const LP = await newRoom({ rule: 'alternate' });

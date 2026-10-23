@@ -1,7 +1,7 @@
 'use strict';
 // Test integracyjny: uruchamia serwer na wolnym porcie i gra dwoma "graczami" przez HTTP.
 const assert = require('assert');
-const { server, hooks, waitForTunnel, checkPortFree, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp } = require('./server');
+const { server, hooks, rooms, waitForTunnel, checkPortFree, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, clientIp } = require('./server');
 
 let base;
 const post = async (p, body) => { const r = await fetch(base + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); return { status: r.status, body: await r.json() }; };
@@ -143,6 +143,39 @@ async function main() {
   assert.strictEqual(payload.code, A.code); assert.strictEqual(payload.opponentConnected, true); assert.ok(Number.isInteger(payload.v)); ok('SSE wysyła stan (z wersją i obecnością przeciwnika)');
   ctrl.abort();
 
+  // ---------- komputer jako przeciwnik ----------
+  const sleepMs = ms => new Promise(r2 => setTimeout(r2, ms));
+  const CREATE_LIMIT = LIMITS.createPer10Min; LIMITS.createPer10Min = 1000;         // ten blok zakłada wiele pokoi z jednego adresu; limit sprawdzamy osobno niżej
+  for (const bad of [{ vs: 'x' }, { vs: 5 }, { vs: 'bot', level: 'zz' }, { vs: 'bot', level: 7 }, { vs: 'bot', level: '__proto__' }, { vs: null }]) assert.strictEqual((await post('/api/create', bad)).status, 400);
+  ok('nieprawidłowy przeciwnik lub poziom komputera odrzucony (także __proto__)');
+  const bc = (await post('/api/create', { vs: 'bot', level: 'hard' })).body, BP = { code: bc.code, token: bc.token };
+  const bstate = async () => (await get(`/api/state?code=${BP.code}&token=${BP.token}`)).body;
+  let bst = await bstate(); const broom = rooms.get(BP.code);
+  assert.strictEqual(bst.vsBot, true); assert.strictEqual(bst.botLevel, 'hard'); assert.strictEqual(bst.phase, 'placing'); assert.strictEqual(bst.opponentJoined, true); assert.strictEqual(bst.opponentConnected, true); assert.strictEqual(bst.opponentReady, true); assert.strictEqual(bst.youReady, false); ok('pokój z komputerem: od razu faza ustawiania, komputer jest dołączony, "na linii" i ma już ustawioną flotę');
+  assert.strictEqual((await post('/api/join', { code: BP.code })).body.code, 'room_full'); ok('do pokoju z komputerem nikt trzeci nie dołączy');
+  assert.strictEqual((await post('/api/chat', Object.assign({ text: 'hej' }, BP))).body.code, 'no_opponent'); ok('z komputerem nie ma czatu');
+  assert.ok(!JSON.stringify(bst).includes(broom.players[1].token)); assert.deepStrictEqual(bst.left.opponent, 10); assert.strictEqual(bst.target.reveal, null); ok('token ani ustawienie floty komputera nie trafiają do gracza');
+  assert.strictEqual((await post('/api/place', Object.assign({ ships: randomFleet() }, BP))).status, 200);
+  bst = await bstate(); assert.strictEqual(bst.phase, 'playing'); ok('po ustawieniu mojej floty gra startuje od razu');
+  const tb = Date.now();
+  if (bst.turn === 1) { assert.ok(await (async () => { for (let k = 0; k < 60; k++) { bst = await bstate(); if (bst.mine.shots.length >= 1) return true; await sleepMs(100); } return false; })(), 'komputer zaczynający nie strzelił'); }
+  else {
+    assert.strictEqual((await post('/api/shoot', Object.assign({ x: 0, y: 0 }, BP))).status, 200);
+    assert.ok(await (async () => { for (let k = 0; k < 60; k++) { bst = await bstate(); if (bst.mine.shots.length >= 1 && bst.turn === 0) return true; await sleepMs(100); } return false; })(), 'komputer nie odpowiedział strzałem');
+  }
+  assert.ok(bst.mine.shots.length >= 1 && bst.last && bst.last.by === 1); ok(`komputer sam strzela po chwili namysłu (${((Date.now() - tb) / 1000).toFixed(1)} s) i wynik trafia do gracza jak każdy inny`);
+  assert.ok(Date.now() - tb >= 600); ok('komputer nie strzela natychmiast (jest chwila "namysłu")');
+  // kilka wymian: komputer za każdym razem strzela w nowe pole i na pewno nie powtarza strzałów
+  for (let i = 1; i <= 3; i++) { await post('/api/shoot', Object.assign({ x: i, y: i }, BP)); for (let k = 0; k < 60; k++) { bst = await bstate(); if (bst.turn === 0 || bst.phase === 'over') break; await sleepMs(100); } }
+  const mine = bst.mine.shots.map(sh => sh.x + ',' + sh.y); assert.strictEqual(new Set(mine).size, mine.length); assert.ok(mine.length >= 3); ok('komputer za każdym razem wybiera nowe pole (' + mine.length + ' strzałów bez powtórek)');
+  // rewanż: po końcu gry jedno kliknięcie, komputer od razu ustawia nową flotę
+  clearTimeout(broom.botTimer); broom.phase = 'over'; broom.winner = 0; broom.turn = null;
+  assert.strictEqual((await post('/api/rematch', BP)).status, 200); bst = await bstate();
+  assert.strictEqual(bst.phase, 'placing'); assert.strictEqual(bst.opponentReady, true); assert.strictEqual(bst.youReady, false); assert.deepStrictEqual(bst.mine.shots, []); ok('rewanż z komputerem: jedno kliknięcie, nowa flota komputera już stoi, czekamy tylko na Ciebie');
+  const ec = (await post('/api/create', { vs: 'bot', level: 'easy' })).body, EP = { code: ec.code, token: ec.token };
+  assert.strictEqual((await get(`/api/state?code=${EP.code}&token=${EP.token}`)).body.botLevel, 'easy'); clearTimeout(rooms.get(EP.code).botTimer); ok('poziom łatwy też zakłada pokój');
+  clearTimeout(broom.botTimer);
+
   // ---------- long-poll (zapas, gdy tunel nie przepuszcza SSE) ----------
   LIMITS.pollMs = 400;
   const pa = (await post('/api/create', {})).body, pb = (await post('/api/join', { code: pa.code })).body;
@@ -191,6 +224,7 @@ async function main() {
   const qr = qrcodeLib(0, 'M'); qr.addData('https://bardzo-dlugi-losowy-adres-tunelu.trycloudflare.com/?room=ABCDEF'); qr.make();
   assert.ok(qr.getModuleCount() >= 25 && qr.getModuleCount() <= 57); ok('QR dla typowego adresu tunelu generuje się (' + qr.getModuleCount() + '×' + qr.getModuleCount() + ' modułów)');
 
+  LIMITS.createPer10Min = CREATE_LIMIT;                                            // dalej sprawdzamy limity (z osobnych adresów IP)
   // ---------- zabezpieczenia ----------
   const hdr = (await fetch(base + '/')).headers;
   assert.ok(/default-src 'self'/.test(hdr.get('content-security-policy')) && /script-src 'self'/.test(hdr.get('content-security-policy')));
@@ -331,6 +365,7 @@ async function main() {
   assert.strictEqual((await fetch(base + '/api/shutdown', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{}' })).status, 403); ok('zamykanie: zwykły POST z formularza/obcej strony (bez tokenu) -> 403');
   assert.strictEqual(exitCode, null); ok('zamykanie: odrzucone próby nie wyłączyły serwera');
 
+  LIMITS.createPer10Min = 1000;                                                    // dalsze testy znów zakładają pokoje z jednego adresu
   const qa = (await post('/api/create', {})).body, qb = (await post('/api/join', { code: qa.code })).body;
   const q0 = (await get(`/api/state?code=${qa.code}&token=${qa.token}`)).body;
   assert.strictEqual(q0.closed, false);

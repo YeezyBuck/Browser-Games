@@ -32,6 +32,18 @@
     <div class="card">
       <h2 data-i18n="lobby.new">Nowa gra</h2>
       <p data-i18n="lobby.newText">Utwórz grę i wyślij znajomemu kod lub link.</p>
+      <label class="pick"><span data-i18n="lobby.opp">Przeciwnik</span>
+        <select id="oppSelect">
+          <option value="friend" data-i18n="opp.friend" selected>Znajomy (przez sieć)</option>
+          <option value="bot" data-i18n="opp.bot">Komputer</option>
+        </select>
+      </label>
+      <label class="pick" id="levelRow" hidden><span data-i18n="lobby.level">Poziom komputera</span>
+        <select id="levelSelect">
+          <option value="easy" data-i18n="level.easy">Łatwy</option>
+          <option value="hard" data-i18n="level.hard" selected>Trudny</option>
+        </select>
+      </label>
       <button id="createBtn" class="primary" type="button" data-i18n="lobby.create">Utwórz grę</button>
     </div>
     <div class="card">

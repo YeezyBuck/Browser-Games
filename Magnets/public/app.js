@@ -222,7 +222,7 @@ function updateBadge() {
 }
 function renderChat(prevLastId) {
   const box = $('#chat');
-  const show = !!state && state.opponentJoined;
+  const show = !!state && state.opponentJoined && !state.vsBot;     // z komputerem nie ma czatu
   box.hidden = !show;
   if (!show) { if (chatOpen) setChatOpen(false); return; }
   const msgs = state.chat || [];
@@ -388,6 +388,7 @@ const E_PER = 10;
 function renderGame(s) {
   const v = shown || s, me = s.you, opp = 1 - me, playing = s.phase === 'playing', over = s.phase === 'over';
   $('#cardYou').className = 'pcard ' + OWNER_CLASS[me] + (playing && !animating && s.turn === me ? ' turn' : '');
+  const who = $('#cardOpp .who'); who.dataset.i18n = s.vsBot ? 'game.bot' : 'game.opp'; who.textContent = t(who.dataset.i18n);
   $('#cardOpp').className = 'pcard ' + OWNER_CLASS[opp] + (playing && !animating && s.turn === opp ? ' turn' : '');
   $('#handYou').textContent = v.hands[me].length; $('#handOpp').textContent = v.hands[opp].length;
   $('#handYouLabel').textContent = t('game.inHandLabel'); $('#handOppLabel').textContent = t('game.inHandLabel');
@@ -434,7 +435,7 @@ function render() {
     $('#chat').hidden = true; setChatOpen(false); chatSeen = null; chatRendered = '';
     return;
   }
-  roomInfo.hidden = false;
+  roomInfo.hidden = !!state.vsBot;                                   // z komputerem nie ma kogo zapraszać
   $('#roomCode').textContent = state.code;
   const s = state;
   if (s.phase === 'waiting') {
@@ -448,7 +449,7 @@ function render() {
   renderGame(s);
   updateInteraction();
   if (animating) banner(t('banner.moving'));
-  else if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : 'banner.oppTurn'));
+  else if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : (s.vsBot ? 'banner.botTurn' : 'banner.oppTurn')));
   else { const [text, cls] = resultBanner(s); banner(text, cls); }
   if (s.opponentJoined && !s.opponentConnected && s.phase !== 'over') banner(t('banner.oppGone'), 'warn');
 }
@@ -602,9 +603,12 @@ $('#resignBtn').addEventListener('click', () => { if (confirm(t('resign.confirm'
 $('#rematchBtn').addEventListener('click', act('/api/rematch'));
 $('#fireworksBtn').addEventListener('click', () => Fireworks.start());
 
+$('#oppSelect').addEventListener('change', () => { $('#levelRow').hidden = $('#oppSelect').value !== 'bot'; });
 $('#createBtn').addEventListener('click', async () => {
   audio();
-  try { enter(await api('/api/create', { field: $('#fieldSelect').value })); } catch (e) { toast(errorText(e)); }
+  const body = { field: $('#fieldSelect').value };
+  if ($('#oppSelect').value === 'bot') { body.vs = 'bot'; body.level = $('#levelSelect').value; }
+  try { enter(await api('/api/create', body)); } catch (e) { toast(errorText(e)); }
 });
 $('#joinForm').addEventListener('submit', async ev => {
   ev.preventDefault();

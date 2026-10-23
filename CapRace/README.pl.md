@@ -4,7 +4,7 @@
 
 Podwórkowy klasyk, **wyścig kapsli**, dla **dwóch osób**: w sieci domowej albo **przez internet**. Każdy gracz ma jeden kapsel, a oboje ścigacie się po **losowo wygenerowanym torze** narysowanym kredą na asfalcie. Kapsel pstrykasz myszką (albo palcem): **miejsce uderzenia** decyduje o rotacji, a **odciągnięcie kursora** o sile. Wygrywa kapsel, który pierwszy minie linię mety. W grze są: czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, kredowe rysunki na torze i w tle, rytmiczna elektroniczna muzyka wyścigowa, efekty dźwiękowe i fajerwerki dla zwycięzcy.
 
-Nie trzeba instalować żadnych bibliotek: wystarczy **Node.js**. Serwer jest sędzią: losuje tor, liczy fizykę każdego pstryknięcia i przekazuje wynik obu graczom. Gra powstała na bazie [WarShips](../WarShips/README.pl.md) i [Dots](../Dots/README.pl.md) i korzysta z ich infrastruktury (pokoje, tunel Cloudflare, czat, zabezpieczenia).
+Można grać **ze znajomym** albo **z komputerem** (poziom łatwy lub trudny). Nie trzeba instalować żadnych bibliotek: wystarczy **Node.js**. Serwer jest sędzią: losuje tor, liczy fizykę każdego pstryknięcia i przekazuje wynik obu graczom. Gra powstała na bazie [WarShips](../WarShips/README.pl.md) i [Dots](../Dots/README.pl.md) i korzysta z ich infrastruktury (pokoje, tunel Cloudflare, czat, zabezpieczenia).
 
 <p align="center">
   <img src="../docs/screenshots/caprace-aim.jpg" width="48%" alt="Wyścig kapsli: celowanie z podglądem toru lotu">
@@ -88,6 +88,8 @@ Potrzebne są dwie osoby (albo dwie karty przeglądarki, żeby spróbować samem
 2. Wybierz **długość toru** i **kto pstryka**, potem kliknij **Utwórz grę**. Pojawi się **6-literowy kod gry** oraz gotowe linki do przekazania przeciwnikowi (🌐 przez internet razem z kodem QR, 🏠 w sieci domowej).
 3. Wyślij znajomemu odpowiedni link (**Kopiuj**) i poczekaj, aż dołączy.
 
+**Gra z komputerem:** w tym samym panelu ustaw **Przeciwnik: Komputer** i wybierz **poziom** (łatwy albo trudny). Gra startuje od razu: nie ma kodu, linku, kodu QR ani czatu, a komputer zawsze zgadza się na rewanż.
+
 ### Gracz 2 – dołącza
 Otwórz link od gracza 1 (kod wpisze się sam) albo otwórz stronę gry, wpisz kod w polu **Dołącz do gry** i kliknij **Dołącz**. Na telefonie możesz zeskanować kod QR.
 
@@ -119,6 +121,7 @@ Warto wiedzieć: adres tunelu jest **tymczasowy** (za każdym razem inny), a kom
 | Rewanż | **Zagraj ponownie (nowy tor)** po zakończeniu gry |
 | Zmiana języka | przyciski **Polski / English** u góry (zapamiętywane) |
 | Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, pstrykanie, rotacja, tor i bandy, kolejka i zderzenia, wskazówki), po polsku i angielsku; działają strzałki i Esc |
+| Przeciwnik komputerowy | **Przeciwnik: Komputer** przy tworzeniu gry, poziom **Łatwy** albo **Trudny**; komputer chwilę „myśli” przed każdym pstryknięciem |
 | Czat | przycisk 💬 w lewym dolnym rogu; Enter wysyła, Esc zamyka; do 200 znaków |
 | Muzyka / efekty | przyciski 🎵 / 🔊 (zapamiętywane); muzyka: oryginalny elektroniczny kawałek „wyścigowy” generowany w przeglądarce (ok. 126 uderzeń na minutę); dźwięki: pstryknięcie, odbicie od bandy, brzęk kapsli, meta |
 | Kopiowanie linku | **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
@@ -161,6 +164,7 @@ Kredowe rysunki (na torze: strzałki, gwiazdki, buźki, klasy, ślady opon i nap
 
 Stałe fizyki (rozmiar kapsla, szerokość toru, tarcie, rotacja, limit pstryknięć) są w obiekcie `P` w `public/engine.js`, a limity serwera w obiekcie `LIMITS` w `server.js`.
 
+- **Komputer gra według tych samych zasad:** działa na serwerze, wybiera pstryknięcie tą samą fizyką i wysyła je tą samą, sprawdzaną drogą co ruch człowieka, więc nie może oszukiwać. Jego token nigdy nie trafia do przeglądarki.
 - **Serwer decyduje o wszystkim:** losuje tor, liczy cały lot każdego pstryknięcia i metę; klient wysyła tylko punkt uderzenia i odciągnięcie, a wynik odtwarza, więc nie może oszukiwać. Każda liczba od klienta jest sprawdzana (tylko skończone liczby, z przycięciem), a pstryknięcie przyjmowane jest tylko w Twojej kolejce i dopiero po zakończeniu poprzedniego lotu.
 - **6-literowy kod pokoju**, limit prób dołączenia (12/min na IP), limit zakładania pokoi (10 na 10 min na IP), maks. 300 pokoi, limit żądań (600/min na IP), limit pstryknięć (3/s na gracza), limit połączeń na żywo; pokoje wygasają po 3 godzinach bezczynności.
 - **Czat:** do 200 znaków, 6 wiadomości na 10 s, tylko zwykły tekst (bez HTML), znaki sterujące i niewidoczne usuwane.
@@ -174,15 +178,18 @@ Stałe fizyki (rozmiar kapsla, szerokość toru, tarcie, rotacja, limit pstrykni
 
 ```
 cd CapRace
-npm test                 # = node engine.test.js && node test.js
+npm test                 # = node engine.test.js && node bot.test.js && node test.js
 ```
+- `bot.test.js` (7 testów): przeciwnik komputerowy: każda decyzja to legalne pstryknięcie, szybkość (trudny najwyżej ok. 0,1 s), kończy wyścig, gdy meta jest w zasięgu, całe partie bot kontra bot z ustalonymi seedami (trudny wygrywa z łatwym w 14 z 16 partii na zmianę i w 21 z 24 przy zasadzie „kto z tyłu”), determinizm.
 - `engine.test.js` (31 testów): silnik: ten sam seed daje ten sam tor, 450 losowych torów (długość, brak nakładających się korytarzy, gładka krzywa), wejście pstryknięcia (anulowanie, przycinanie, znak rotacji), zasięg i skręt pstryknięcia, zderzenia (pęd, brak przyrostu energii, kapsle nigdy się nie nakładają), 1000 losowych pstryknięć na 40 torach (kapsel nigdy nie opuszcza toru), meta, determinizm, kolejność pstrykania i kredowe rysunki (deterministyczne, na torze i z dala od band).
-- `test.js` (61 testów): serwer przez HTTP: pokoje i ustawienia, walidacja pstryknięć, blokada „busy”, obie zasady kolejki, meta, limit pstryknięć, poddanie się, rewanż, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
+- `test.js` (70 testów): serwer przez HTTP: pokoje i ustawienia, pokój z komputerem (natychmiastowy start, brak czatu, komputer pstryka sam, rewanż), walidacja pstryknięć, blokada „busy”, obie zasady kolejki, meta, limit pstryknięć, poddanie się, rewanż, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
 
 ## 11. Struktura projektu (dla programistów)
 
 ```
 CapRace/
+├── bot.js                 przeciwnik komputerowy (po stronie serwera): próbuje wielu pstryknięć prawdziwą fizyką i wybiera najlepsze
+├── bot.test.js            testy przeciwnika komputerowego
 ├── engine.test.js         testy silnika
 ├── server.js              serwer HTTP: pokoje, kolejka, limity, tunel, zamykanie (bez zależności)
 ├── test.js                test integracyjny serwera
@@ -201,13 +208,15 @@ CapRace/
     └── vendor/qrcode.js   generator kodów QR (qrcode-generator, MIT, dołączony bez zmian)
 ```
 
+**Przeciwnik komputerowy (`bot.js`).** Fizyka jest deterministyczna i szybka (ok. 1 ms na pstryknięcie), więc komputer „wyobraża sobie” kilkaset pstryknięć (kierunki w stronę kolejnych punktów toru × siła × rotacja), symuluje je tym samym silnikiem i wybiera najlepsze: według postępu, tego, jak daleko cofa rywala, i odległości od band. Przy zasadzie „kto z tyłu” gra też taktycznie: podjeżdża do rywala od tyłu bez wyprzedzania, jeśli nie musi, wyprzedza o niewielki margines i nie pozwala rywalowi skończyć z miejsca. Poziom łatwy próbuje tylko kilkunastu pstryknięć i dodaje błąd celowania.
+
 **Jak to działa.** Tor to krzywa środkowa złożona z prostych i łagodnych łuków (promień co najmniej 130, czyli nigdy ostrzej, niż tor jest szeroki), próbkowana co 8 jednostek; generator próbuje kolejnych seedów, jeśli dwa fragmenty toru zbliżą się do siebie. Kapsel jest „w torze”, dopóki jego środek jest bliżej krzywej niż `halfW - capR`, więc bandy są obłe i nie ma skrótów. Fizyka (120 kroków na sekundę): tarcie stałe i proporcjonalne, kierunek lotu skręcający wraz z zanikającą rotacją, impulsy przy zderzeniach z bandą (sprężystość 0,6) i między kapslami (0,9). Serwer wysyła stan pokoju z **seedem** toru (klient odtwarza ten sam tor), a po pstryknięciu **trajektorię** próbkowaną 30 razy na sekundę wraz ze zdarzeniami dźwiękowymi; klienci ją interpolują. Serwer trzyma stan pokoi w pamięci; klienci dostają zmiany strumieniem **SSE** (albo **long-pollingiem**, gdy strumień nie dochodzi, np. przez tunel).
 
 **Interfejs HTTP:**
 
 | Metoda i adres | Opis |
 |---|---|
-| `POST /api/create` (`{len: s/m/l, rule: last/alternate}`), `/api/join` | utworzenie pokoju i dołączenie (kod → token gracza) |
+| `POST /api/create` (`{len: s/m/l, rule: last/alternate, vs: friend/bot, level: easy/hard}`), `/api/join` | utworzenie pokoju i dołączenie (kod → token gracza) |
 | `POST /api/shoot` (`{hx, hy, px, py}`: punkt uderzenia na kapslu −1..1, wektor odciągnięcia) | pstryknięcie kapsla |
 | `POST /api/resign`, `/api/rematch` | poddanie się, rewanż (nowy tor) |
 | `POST /api/chat` | wiadomość czatu |

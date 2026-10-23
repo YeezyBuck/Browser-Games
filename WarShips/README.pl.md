@@ -4,7 +4,7 @@
 
 Klasyczna gra w statki dla **dwóch graczy**: w sieci domowej albo **przez internet**. Gra ma wbudowany czat, kod QR do dołączania z telefonu, polski i angielski interfejs, animowane tło z walczącymi statkami pirackimi, muzykę oraz dźwięki *boom* (trafienie), *plusk* (pudło) i potężny, wieloczęściowy wybuch przy zatopieniu statku. Trafienia pokazują wybuchy na statku, a zwycięzca dostaje fajerwerki.
 
-Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i nigdy nie wysyła przeciwnikowi pozycji Twoich statków.
+Można grać **ze znajomym** albo **z komputerem** (poziom łatwy lub trudny). Nie wymaga instalowania żadnych bibliotek: wystarczy **Node.js**. Serwer jest „sędzią” gry i nigdy nie wysyła przeciwnikowi pozycji Twoich statków.
 
 <p align="center">
   <img src="../docs/screenshots/warships-battle.jpg" width="48%" alt="WarShips: wybuch na trafionym statku">
@@ -95,6 +95,8 @@ Potrzebujesz dwóch osób (albo dwóch kart przeglądarki do wypróbowania w poj
    - 🏠 **Przeciwnik w tej samej sieci Wi-Fi/LAN**.
 4. Wyślij znajomemu odpowiedni link (przycisk **Kopiuj**) i poczekaj, aż dołączy.
 
+**Gra z komputerem:** na ekranie startowym ustaw **Przeciwnik: Komputer** i wybierz **poziom** (łatwy albo trudny). Od razu przechodzisz do ustawiania statków (komputer ma już ustawioną flotę), a gra startuje, gdy klikniesz **Gotowe**. Nie ma kodu, linku, kodu QR ani czatu, a komputer zawsze zgadza się na rewanż.
+
 ### Gracz 2 – dołącza
 - otwórz link od gracza 1 (kod wpisze się sam), **albo**
 - otwórz adres gry, wpisz 6-literowy kod w polu **Dołącz do gry** i kliknij **Dołącz**.
@@ -170,6 +172,7 @@ Po instalacji otwórz nowe okno terminala. (Serwer sam sprawdza też typowe fold
 |---|---|
 | Zmiana języka | przyciski **Polski / English** u góry; wybór jest zapamiętywany (domyślnie wg języka przeglądarki) |
 | Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, flota, ustawianie, strzelanie, zatopienie, dodatki), po polsku i angielsku; działają strzałki i Esc |
+| Przeciwnik komputerowy | **Przeciwnik: Komputer** przy tworzeniu gry, poziom **Łatwy** albo **Trudny**; komputer chwilę „myśli” przed każdym strzałem |
 | Czat | przycisk 💬 w lewym dolnym rogu (po dołączeniu przeciwnika); Enter wysyła, Esc zamyka; czerwona odznaka = nieprzeczytane; do 200 znaków |
 | Muzyka | przycisk 🎵 wycisza/włącza; startuje po pierwszym kliknięciu na stronie (wymóg przeglądarek) |
 | Efekty dźwiękowe (boom, plusk, wybuch przy zatopieniu, sygnał czatu) | przycisk 🔊 |
@@ -225,6 +228,7 @@ Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długoś
 - **Kod pokoju: 6 liter** (ok. 190 mln kombinacji) i limit prób dołączenia (12/min na adres IP).
 - **Limity na adres IP:** 600 żądań/min, 10 nowych pokoi na 10 min, 8 połączeń na żywo; maks. 300 pokoi na serwerze; pokoje wygasają po 3 h bezczynności.
 - **Czat:** do 200 znaków, 6 wiadomości na 10 s, treść jako zwykły tekst (bez HTML), usuwane znaki sterujące i niewidoczne.
+- **Komputer gra według tych samych zasad:** działa na serwerze, ustawia flotę i strzela tą samą, sprawdzaną drogą co człowiek, a widzi tylko to, co człowiek (wyniki własnych strzałów i zatopione okręty), nigdy Twojej floty. Jego token nigdy nie trafia do przeglądarki.
 - **Serwer rozstrzyga o wszystkim:** pozycje statków poznasz dopiero po końcu gry; wszystkie ruchy są walidowane po stronie serwera.
 - **Nagłówki bezpieczeństwa:** Content-Security-Policy (tylko własne skrypty), `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 - **Za tunelem** prawdziwy adres klienta jest brany z nagłówka Cloudflare tylko dla połączeń z tego komputera. Adresy sieci domowej widzi tylko gospodarz.
@@ -236,15 +240,17 @@ Stałe w `server.js`: `KEEP_TURN_ON_HIT`, `ALLOW_TOUCHING`, `CODE_LEN` (długoś
 
 ```
 cd WarShips
-node test.js        # albo: npm test
+npm test            # = node bot.test.js && node test.js
 ```
-Test uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling, bibliotekę QR, tunel i instalację cloudflared (z atrapami programów) oraz zamykanie gry. Na końcu: `Wszystkie testy przeszły (N)`.
+`bot.test.js` (10 testów) sprawdza przeciwnika komputerowego: jego floty są zgodne z regułami (300 losowych flot), nigdy nie strzela poza planszę ani dwa razy w to samo pole, dobija trafiony okręt i nie marnuje strzałów obok zatopionego, w ogóle nie używa floty przeciwnika oraz siłę (trudny topi flotę w ok. 55 strzałach, łatwy w ok. 70; trudny wygrywa z łatwym 188 z 200 partii). `test.js` uruchamia serwer na wolnym porcie i rozgrywa pełną partię dwoma „graczami” przez HTTP. Sprawdza m.in.: walidację floty, kolejkę, ukrywanie statków, rewanż, czat, limity, long-polling, bibliotekę QR, tunel i instalację cloudflared (z atrapami programów) oraz zamykanie gry. Na końcu: `Wszystkie testy przeszły (N)`.
 
 ## 12. Budowa projektu (dla programistów)
 
 ```
 WarShips/
 ├── server.js            serwer HTTP: reguły gry, pokoje, limity, tunel (bez zależności)
+├── bot.js               przeciwnik komputerowy (po stronie serwera): losowa flota, strzelanie według prawdopodobieństwa
+├── bot.test.js          testy przeciwnika komputerowego
 ├── test.js              test integracyjny (node test.js)
 ├── package.json         skrypty: start, tunnel, test
 ├── uruchom.bat              główny start (Windows): cloudflared → tunel → gra → przeglądarka
@@ -262,13 +268,15 @@ WarShips/
     └── vendor/qrcode.js generator kodów QR (qrcode-generator, licencja MIT, dołączony bez zmian)
 ```
 
+**Przeciwnik komputerowy (`bot.js`).** Komputer ustawia losową flotę zgodną z regułami. Strzelając, wie tylko to, co człowiek. Poziom **trudny** liczy dla każdego nieznanego pola, ile z jeszcze pływających okrętów mogłoby się przez nie rozciągać (z zasadą, że okręty się nie stykają, i z dużo większą wagą ustawień zgodnych z trafieniami), więc sprawnie dobija okręt i pomija pola przylegające do zatopionych. Poziom **łatwy** poluje losowo i przez większość czasu dobija trafiony okręt, bez żadnego liczenia.
+
 **Jak to działa.** Serwer trzyma stan pokoi w pamięci i jest jedynym źródłem prawdy. Klient wysyła polecenia zwykłymi żądaniami POST, a zmiany stanu odbiera strumieniem **SSE**. Jeśli strumień nie dociera w 3 s (np. tunel), przełącza się na **long-polling** (`/api/poll`). Każdy gracz dostaje tylko swój widok stanu.
 
 **Interfejs HTTP:**
 
 | Metoda i adres | Opis |
 |---|---|
-| `POST /api/create`, `/api/join` | założenie pokoju i dołączenie (kod → token gracza) |
+| `POST /api/create` (`{vs: friend/bot, level: easy/hard}`), `/api/join` | założenie pokoju i dołączenie (kod → token gracza) |
 | `POST /api/place`, `/api/shoot`, `/api/rematch` | ustawienie floty, strzał, rewanż |
 | `POST /api/chat` | wiadomość czatu |
 | `POST /api/shutdown` | wyłączenie serwera i tunelu (tylko z lokalnego komputera, wymaga tajnego tokenu) |

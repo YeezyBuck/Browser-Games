@@ -4,7 +4,7 @@
 
 ## Po polsku
 
-Zbiór małych gier, w które grasz w przeglądarce, napisanych od zera, **bez zewnętrznych bibliotek** (jedyny dołączony cudzy kod to generator kodów QR, zobacz [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). Gry dla dwóch osób działają w sieci domowej **albo przez internet** dzięki tunelowi Cloudflare, mają czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, **samouczek w grze (przycisk ❓ Jak grać)**, dźwięki i muzykę generowane w przeglądarce oraz animacje na canvasie.
+Zbiór małych gier, w które grasz w przeglądarce, napisanych od zera, **bez zewnętrznych bibliotek** (jedyny dołączony cudzy kod to generator kodów QR, zobacz [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). Każdą z gier dla dwóch osób można zagrać **z komputerem** (poziom łatwy lub trudny) albo ze znajomym: w sieci domowej **albo przez internet** dzięki tunelowi Cloudflare, mają czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, **samouczek w grze (przycisk ❓ Jak grać)**, dźwięki i muzykę generowane w przeglądarce oraz animacje na canvasie.
 
 | Gra | Opis | Folder | Port | Instrukcja |
 |---|---|---|---|---|
@@ -50,7 +50,7 @@ Na innych systemach: `cd WarShips` (albo `cd Dots`, `cd CapRace`, `cd Magnets`, 
 ### Jak to jest zbudowane
 - Serwery to czysty Node.js (bez `npm install`): statyczne pliki, stan na żywo przez SSE z zapasowym long-pollingiem (działa przez tunel), ruchy przez POST. **Serwer jest sędzią**: sprawdza każdy ruch, a przeciwnik nigdy nie dostaje danych, których nie powinien znać.
 - Zabezpieczenia: 6-literowe kody pokoi z limitem prób, limity żądań na adres IP, Content-Security-Policy, czat tylko jako zwykły tekst, wyłączanie serwera tylko z lokalnego komputera z tajnym tokenem. Zobacz [SECURITY.md](SECURITY.md).
-- Każda gra ma testy: `npm test` w jej folderze (WarShips: 74 testy, Dots: 11 testów silnika i 53 testy serwera, CapRace: 31 testów silnika i 61 testów serwera, Magnets: 29 testów silnika i 62 testy serwera, TicTacToe: 12 testów strony i 46 testów serwera).
+- Każda gra ma testy: `npm test` w jej folderze (WarShips: 10 testów przeciwnika komputerowego i 85 testów serwera, Dots: 11 testów silnika, 10 testów przeciwnika i 64 testy serwera, CapRace: 31 testów silnika, 7 testów przeciwnika i 70 testów serwera, Magnets: 29 testów silnika, 7 testów przeciwnika i 71 testów serwera, TicTacToe: 12 testów strony i 46 testów serwera).
 
 ### Ważne
 Gry są przeznaczone do grania ze znajomymi: serwer działa na Twoim komputerze, a tunel Cloudflare „quick” jest tymczasowy i przeznaczony do testów. **Nie są przygotowane do stałego hostowania publicznego** (nie ma kont; każdy, kto zna kod pokoju, może dołączyć jako drugi gracz).
@@ -60,7 +60,7 @@ Gry są przeznaczone do grania ze znajomymi: serwer działa na Twoim komputerze,
 
 ## English
 
-A small collection of games you play in the browser, written from scratch with **no external libraries** (the only bundled third-party code is a QR code generator, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). The two-player games work on your home network **or over the internet** through a Cloudflare tunnel, and have a chat, a QR code for joining from a phone, a Polish and English interface, an **in-game tutorial (the ❓ How to play button)**, sounds and music synthesized in the browser, and canvas animations.
+A small collection of games you play in the browser, written from scratch with **no external libraries** (the only bundled third-party code is a QR code generator, see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)). Every two-player game can be played **against the computer** (easy or hard level) or with a friend: on your home network **or over the internet** through a Cloudflare tunnel, and have a chat, a QR code for joining from a phone, a Polish and English interface, an **in-game tutorial (the ❓ How to play button)**, sounds and music synthesized in the browser, and canvas animations.
 
 | Game | Description | Folder | Port | Instructions |
 |---|---|---|---|---|
@@ -98,7 +98,7 @@ On other systems: `cd WarShips` (or `cd Dots`, `cd CapRace`, `cd Magnets`, `cd T
 ### How it is built
 - The servers are plain Node.js (no `npm install`): static files, live state over SSE with a long-polling fallback (works through the tunnel), moves over POST. **The server is the referee**: it validates every move, and your opponent never receives data they should not know.
 - Protections: 6-letter room codes with rate limits, per-IP request limits, a Content-Security-Policy, plain-text-only chat, and a shutdown endpoint reachable only from the local machine with a secret token. See [SECURITY.md](SECURITY.md).
-- Every game has tests: `npm test` in its folder (WarShips: 74 tests, Dots: 11 engine tests and 53 server tests, CapRace: 31 engine tests and 61 server tests, Magnets: 29 engine tests and 62 server tests, TicTacToe: 12 page tests and 46 server tests).
+- Every game has tests: `npm test` in its folder (WarShips: 10 computer-opponent tests and 85 server tests, Dots: 11 engine tests, 10 computer-opponent tests and 64 server tests, CapRace: 31 engine tests, 7 computer-opponent tests and 70 server tests, Magnets: 29 engine tests, 7 computer-opponent tests and 71 server tests, TicTacToe: 12 page tests and 46 server tests).
 
 ### Important
 The games are meant for playing with friends: the server runs on your computer, and the "quick" Cloudflare tunnel is temporary and intended for testing. **They are not hardened for permanent public hosting** (there are no accounts; anyone who knows a room code can join as the second player).

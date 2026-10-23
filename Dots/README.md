@@ -4,7 +4,7 @@
 
 The classic Polish **Dots** game (surround and capture) for **two players**: on your home network or **over the internet**. Players take turns placing dots on a grid, and a closed loop of your own dots around your opponent's dots captures them. The game has a built-in chat, a QR code for joining from a phone, Polish and English interface, a night sky with constellations in the background, calm music, sound effects and fireworks for the winner.
 
-No libraries to install: all you need is **Node.js**. The server is the referee and enforces all the rules. The game is built on top of [WarShips](../WarShips/README.md) and shares its infrastructure (rooms, Cloudflare tunnel, chat, security).
+You can play **against a friend** or **against the computer** (easy or hard). No libraries to install: all you need is **Node.js**. The server is the referee and enforces all the rules. The game is built on top of [WarShips](../WarShips/README.md) and shares its infrastructure (rooms, Cloudflare tunnel, chat, security).
 
 <p align="center">
   <img src="../docs/screenshots/dots-capture.jpg" width="48%" alt="Dots: capturing an enemy dot">
@@ -85,6 +85,8 @@ You need two people (or two browser tabs to try it out alone).
 2. Choose the **board size** and click **Create game**. A **6-letter game code** appears, with ready-made links to give your opponent (🌐 over the internet together with a QR code, 🏠 on the home network).
 3. Send your friend the right link (**Copy**) and wait for them to join.
 
+**Playing against the computer:** in the same panel set **Opponent: Computer** and pick the **level** (easy or hard). The game starts at once: there is no code, link, QR code or chat, and the computer always agrees to a rematch. When you propose to end the game and count the points, the computer agrees if it is not losing and declines otherwise.
+
 ### Player 2 – joins
 Open the link from player 1 (the code fills in automatically), or open the game page, type the code into **Join a game** and click **Join**. On a phone you can scan the QR code.
 
@@ -117,6 +119,7 @@ Good to know: the tunnel address is **temporary** (it changes every time), and t
 | Rematch | **Play again** after the game |
 | Language | **Polski / English** buttons at the top (remembered) |
 | Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, connecting, capturing, locked spots, ending, tips), in Polish and English; arrow keys and Esc work |
+| Computer opponent | **Opponent: Computer** when creating a game, level **Easy** or **Hard**; the computer thinks for a moment before each move |
 | Chat | 💬 button at the bottom left; Enter sends, Esc closes; up to 200 characters |
 | Music / effects | 🎵 / 🔊 buttons (remembered); sounds: placing a dot, capture, end of game |
 | Copying the link | **Copy** in the waiting panel or **Copy link** at the top |
@@ -159,6 +162,7 @@ Animations (background, capture effects, fireworks) are turned off if your syste
 
 Board sizes are set in `server.js` (the `SIZES` constant) and limits in the `LIMITS` object.
 
+- **The computer opponent plays by the same rules:** it runs on the server and places its dots through the same checked path as a human move, and it sees only the board, like a human. Its token never reaches the browser.
 - **The server decides everything:** every move is validated on the server by the game engine; the client cannot cheat. The engine (`engine.js`) is not served to browsers.
 - **6-letter room code**, join-attempt limit (12/min per IP), room-creation limit (10 per 10 min per IP), at most 300 rooms, request limit (600/min per IP), move limit (8/s per player), live-connection limit; rooms expire after 3 hours of inactivity.
 - **Chat:** up to 200 characters, 6 messages per 10 s, plain text only (no HTML), control and invisible characters removed.
@@ -171,16 +175,19 @@ Board sizes are set in `server.js` (the `SIZES` constant) and limits in the `LIM
 
 ```
 cd Dots
-npm test                 # = node engine.test.js && node test.js
+npm test                 # = node engine.test.js && node bot.test.js && node test.js
 ```
+- `bot.test.js` (10 tests): the computer opponent: every decision is a legal move, speed (at most about 0.1 s), hard closes a loop and captures when it can and blocks a spot where the opponent would capture, easy usually captures but rarely defends, hard beats easy in 12 of 12 games (fixed seeds), determinism, and the answer to an "end the game" proposal.
 - `engine.test.js` (11 tests): the game rules: capture by a diamond, a gap in the loop, locking, the board edge, the no-suicide rule and its exception, end of game, and 12 random games checking invariants.
-- `test.js` (53 tests): the server over HTTP: rooms and sizes, moves and validation, capture, end proposals, resigning, draw, rematch, ending by no moves, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
+- `test.js` (64 tests): the server over HTTP: rooms and sizes, a room against the computer (instant start, no chat, the computer moves by itself, it answers end proposals, rematch), moves and validation, capture, end proposals, resigning, draw, rematch, ending by no moves, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
 
 ## 11. Project structure (for developers)
 
 ```
 Dots/
 ├── engine.js              game engine (pure functions): captures, locks, suicide, end of game
+├── bot.js                 the computer opponent (server side): scores every move with the engine, 2-ply look-ahead on the hard level
+├── bot.test.js            computer opponent tests
 ├── engine.test.js         engine tests
 ├── server.js              HTTP server: rooms, turns, limits, tunnel, shutdown (no dependencies)
 ├── test.js                server integration test
@@ -198,13 +205,15 @@ Dots/
     └── vendor/qrcode.js   QR code generator (qrcode-generator, MIT, bundled unchanged)
 ```
 
+**The computer opponent (`bot.js`).** The engine can cheaply check any move (`tryMove` returns the new board and the captured dots), so the computer scores every empty spot near the dots: how many dots the move captures, how many dots the opponent would capture there (occupying that spot blocks the loop), and a little for shape (neighbours of its own dots). The **hard** level also looks one move further for its best candidates: it subtracts what the opponent could capture in reply and rewards creating two different capture threats at once (the opponent can block only one). The **easy** level captures when it sees a capture (in about 80% of its moves), otherwise puts a dot next to other dots, and does not defend.
+
 **How it works.** The server keeps room state in memory. The client sends moves as plain POST requests and receives changes through an **SSE** stream (or, when the stream does not arrive, e.g. through a tunnel, it switches to **long-polling**). Enclosure is computed by flood-filling the board from the outside in 4 directions while avoiding the live dots of one colour: cells that cannot be reached are enclosed.
 
 **HTTP interface:**
 
 | Method and address | Description |
 |---|---|
-| `POST /api/create` (`{size: s/m/l}`), `/api/join` | create a room and join it (code → player token) |
+| `POST /api/create` (`{size: s/m/l, vs: friend/bot, level: easy/hard}`), `/api/join` | create a room and join it (code → player token) |
 | `POST /api/move` (`{x, y}`) | place a dot |
 | `POST /api/offer` (`{action: offer/accept/reject/cancel}`), `/api/resign`, `/api/rematch` | end by agreement, resign, rematch |
 | `POST /api/chat` | chat message |

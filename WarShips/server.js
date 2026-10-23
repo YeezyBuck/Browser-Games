@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const Bot = require('./bot');
 const { spawn, spawnSync } = require('child_process');
 const readline = require('readline');
 const net = require('net');
@@ -104,7 +105,41 @@ const shipSunk = (ship, shotsAtMe) => ship.cells.every(([x, y]) => shotsAtMe.has
 function isOnline(room, pi) {
   const p = room.players[pi];
   if (!p) return false;
+  if (room.bot && room.bot.seat === pi) return true;                       // komputer jest zawsze "na linii"
   return p.conns.size > 0 || (room.waiters || []).some(w => w.pi === pi) || Date.now() - p.seen < LIMITS.presenceMs;
+}
+
+// ---------- komputer jako drugi gracz ----------
+// Pokój z botem ma od razu dwóch graczy: człowiek (miejsce 0) i komputer (miejsce 1, token nieznany nikomu). Bot ustawia flotę i strzela
+// tymi samymi funkcjami place() i shoot() co człowiek, więc nie może oszukiwać. Do strzelania dostaje tylko to, co widzi człowiek
+// (wyniki swoich strzałów i zatopione okręty), nigdy ustawienia floty przeciwnika. Decyzje liczy bot.js.
+const BOT_LEVELS = ['easy', 'hard'];
+function addBot(room, level) {
+  const bot = newPlayer(crypto.randomBytes(16).toString('hex'));
+  bot.bot = true; room.players.push(bot); room.bot = { seat: 1, level };
+}
+function maybeBot(room) {
+  if (!room.bot) return;
+  const seat = room.bot.seat;
+  if (room.phase === 'placing' && !room.players[seat].ready) {                       // flotę komputer ustawia od razu
+    for (let i = 0; i < 5; i++) { if (!place(room, seat, Bot.makeFleet())) break; }
+    broadcast(room);
+  }
+  if (room.phase !== 'playing' || room.turn !== seat || room.botTimer) return;
+  room.botTimer = setTimeout(() => { room.botTimer = null; botTurn(room); }, 650 + Math.random() * 800);
+  if (room.botTimer.unref) room.botTimer.unref();
+}
+function botTurn(room) {
+  if (!room.bot || rooms.get(room.code) !== room || room.phase !== 'playing' || room.turn !== room.bot.seat || room.closed) return;
+  const seat = room.bot.seat;
+  let r = { error: 'none' };
+  try {
+    const v = viewFor(room, seat), m = Bot.chooseShot({ shots: v.target.shots, sunk: v.target.sunk }, room.bot.level);
+    if (m) r = shoot(room, seat, m.x, m.y);
+  } catch (e) { /* awaryjnie: pierwsze wolne pole poniżej */ }
+  if (r.error) outer: for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) if (!room.players[seat].fired.has(key(x, y)) && !shoot(room, seat, x, y).error) break outer;
+  broadcast(room);
+  maybeBot(room);
 }
 
 // ---------- stan widoczny dla konkretnego gracza ----------
@@ -124,6 +159,7 @@ function viewFor(room, pi) {
     v: room.version || 0,
     chat: (room.chat || []).slice(-50),
     closed: !!room.closed,
+    vsBot: !!room.bot, botLevel: room.bot ? room.bot.level : null,
     youReady: me.ready,
     opponentReady: !!opp && opp.ready,
     youWantRematch: me.rematch,
@@ -211,7 +247,7 @@ function cleanChat(text) {
 }
 
 function chat(room, pi, text) {
-  if (room.players.length < 2) return 'no_opponent';
+  if (room.players.length < 2 || room.bot) return 'no_opponent';
   const msg = cleanChat(text);
   if (!msg || [...msg].length > LIMITS.chatMaxLen) return 'chat_invalid';
   if (!allow('chat', room.code + ':' + pi, LIMITS.chatPer10s, 10000)) return 'rate_limited';
@@ -223,6 +259,7 @@ function chat(room, pi, text) {
 function rematch(room, pi) {
   if (room.phase !== 'over') return 'not_over';
   room.players[pi].rematch = true;
+  if (room.bot) room.players[room.bot.seat].rematch = true;               // komputer zawsze zgadza się na rewanż
   if (room.players.length === 2 && room.players.every(p => p.rematch)) resetForRematch(room);
   return null;
 }
@@ -523,9 +560,13 @@ const server = http.createServer(async (req, res) => {
         if (!allow('create', ip, LIMITS.createPer10Min, 10 * 60000)) return fail(res, 429, 'rate_limited');
         if (rooms.size >= LIMITS.maxRooms) return fail(res, 503, 'too_many_rooms');
         const room = { code: makeCode(), phase: 'waiting', turn: null, winner: null, last: null, seq: 0, chat: [], chatSeq: 0, updated: Date.now(), players: [] };
+        const vs = body.vs === undefined ? 'friend' : body.vs, level = body.level === undefined ? 'hard' : body.level;
+        if (vs !== 'friend' && vs !== 'bot') return fail(res, 400, 'bad_request');
+        if (vs === 'bot' && !BOT_LEVELS.includes(level)) return fail(res, 400, 'bad_request');
         const token = crypto.randomBytes(16).toString('hex');
         room.players.push(newPlayer(token));
         rooms.set(room.code, room);
+        if (vs === 'bot') { addBot(room, level); room.phase = 'placing'; maybeBot(room); }      // z komputerem od razu ustawiamy statki
         return sendJson(res, 200, { code: room.code, token, you: 0 });
       }
       if (p === '/api/join') {
@@ -552,18 +593,21 @@ const server = http.createServer(async (req, res) => {
         const err = place(a.room, a.pi, body.ships);
         if (err) return fail(res, 400, err);
         broadcast(a.room);
+        maybeBot(a.room);
         return sendJson(res, 200, { ok: true });
       }
       if (p === '/api/shoot') {
         const r = shoot(a.room, a.pi, body.x, body.y);
         if (r.error) return fail(res, 400, r.error);
         broadcast(a.room);
+        maybeBot(a.room);
         return sendJson(res, 200, r);
       }
       if (p === '/api/rematch') {
         const err = rematch(a.room, a.pi);
         if (err) return fail(res, 400, err);
         broadcast(a.room);
+        maybeBot(a.room);
         return sendJson(res, 200, { ok: true });
       }
       return fail(res, 404, 'unknown_cmd');
@@ -577,7 +621,7 @@ const server = http.createServer(async (req, res) => {
 
 setInterval(() => {
   const now = Date.now();
-  for (const [code, room] of rooms) if (now - room.updated > ROOM_TTL_MS) rooms.delete(code);
+  for (const [code, room] of rooms) if (now - room.updated > ROOM_TTL_MS) { clearTimeout(room.botTimer); rooms.delete(code); }
 }, 10 * 60 * 1000).unref();
 
 // Zmiana obecności gracza (np. long-poll przestał pukać) wysyłana do drugiego gracza.
@@ -674,4 +718,4 @@ if (require.main === module) {
   main().catch(e => { console.log('Błąd uruchamiania:', e.message); process.exit(1); });
 }
 
-module.exports = { server, hooks, waitForTunnel, checkPortFree, findCloudflared, pickInstaller, cleanChat, parseFleet, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };
+module.exports = { server, hooks, rooms, BOT_LEVELS, waitForTunnel, checkPortFree, findCloudflared, pickInstaller, cleanChat, parseFleet, FLEET, CODE_LEN, LIMITS, TUNNEL_RE, tunnel, startTunnel, ensureCloudflared, clientIp };

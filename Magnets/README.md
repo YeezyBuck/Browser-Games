@@ -4,7 +4,7 @@
 
 A game of nerve and magnetism for **two players**: on your home network or **over the internet**. Each of you has **10 irregular magnets**, and the field is small. You take turns placing **one magnet** on the field, but magnets attract and repel each other. When magnets **join** after everything has settled, the whole group **returns to the hand of the player who caused it**, even your opponent's magnets. **Whoever gets rid of all their magnets first wins.** The game has a built-in chat, a QR code for joining from a phone, a Polish and English interface, a steel-plate board with a faint magnetic-field background, a calm "lab" music track, sound effects and fireworks for the winner.
 
-No libraries to install: all you need is **Node.js**. The server is the referee: it computes the physics of every magnet you place, finds the joined groups and tells both players the result. The game is built on top of [WarShips](../WarShips/README.md), [Dots](../Dots/README.md) and [CapRace](../CapRace/README.md) and shares their infrastructure (rooms, Cloudflare tunnel, chat, security).
+You can play **against a friend** or **against the computer** (easy or hard). No libraries to install: all you need is **Node.js**. The server is the referee: it computes the physics of every magnet you place, finds the joined groups and tells both players the result. The game is built on top of [WarShips](../WarShips/README.md), [Dots](../Dots/README.md) and [CapRace](../CapRace/README.md) and shares their infrastructure (rooms, Cloudflare tunnel, chat, security).
 
 <p align="center">
   <img src="../docs/screenshots/magnets-aim.jpg" width="48%" alt="Magnets: placing a magnet next to an opponent's magnet, with the force lines and the warning">
@@ -87,6 +87,8 @@ You need two people (or two browser tabs to try it out alone).
 2. Choose the **field size** and click **Create game**. A **6-letter game code** appears, with ready-made links to give your opponent (🌐 over the internet together with a QR code, 🏠 on the home network).
 3. Send your friend the right link (**Copy**) and wait for them to join.
 
+**Playing against the computer:** in the same panel set **Opponent: Computer** and pick the **level** (easy or hard). The game starts at once: there is no code, link, QR code or chat, and the computer always agrees to a rematch.
+
 ### Player 2 – joins
 Open the link from player 1 (the code fills in automatically), or open the game page, type the code into **Join a game** and click **Join**. On a phone you can scan the QR code.
 
@@ -123,6 +125,7 @@ Good to know: the tunnel address is **temporary** (it changes every time), and t
 | Rematch | **Play again** after the game |
 | Language | **Polski / English** buttons at the top (remembered) |
 | Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, poles, placing, joining, turns and the end, tips), in Polish and English; four of the animations are computed by the real game engine (including a map of safe spots); arrow keys and Esc work |
+| Computer opponent | **Opponent: Computer** when creating a game, level **Easy** or **Hard**; the computer thinks for a moment before each move |
 | Chat | 💬 button at the bottom left; Enter sends, Esc closes; up to 200 characters |
 | Music / effects | 🎵 / 🔊 buttons (remembered); music: an original calm "lab" track generated in the browser (92 bpm); sounds: placing, clack of magnets, bump on the wall, "ding" of a join, magnets returning, end of game |
 | Copying the link | **Copy** in the waiting panel or **Copy link** at the top |
@@ -165,6 +168,7 @@ The background (faint magnetic-field lines) is drawn once, without animation. Th
 
 Physics constants (strength of the magnets, friction, field sizes, the number of magnets, the move limit) are in the `P` object of `public/engine.js`, and server limits in the `LIMITS` object of `server.js`.
 
+- **The computer opponent plays by the same rules:** it runs on the server and places its magnets through the same checked path as a human move, so it cannot cheat. Its token never reaches the browser.
 - **The server decides everything:** it computes the whole movement after each placed magnet and finds the joined groups; the client only sends the magnet number, the position and the angle and replays the result, so it cannot cheat. Every number from the client is checked (finite numbers only, the magnet must be in your hand, the spot must be free), and a move is accepted only on your turn and only after the previous movement has ended.
 - **6-letter room code**, join-attempt limit (12/min per IP), room-creation limit (10 per 10 min per IP), at most 300 rooms, request limit (600/min per IP), move limit (3/s per player), live-connection limit; rooms expire after 3 hours of inactivity.
 - **Chat:** up to 200 characters, 6 messages per 10 s, plain text only (no HTML), control and invisible characters removed.
@@ -178,15 +182,18 @@ Physics constants (strength of the magnets, friction, field sizes, the number of
 
 ```
 cd Magnets
-npm test                 # = node engine.test.js && node test.js
+npm test                 # = node engine.test.js && node bot.test.js && node test.js
 ```
+- `bot.test.js` (7 tests): the computer opponent: every decision is a legal move, speed (hard at most about 0.8 s), at the start of a game hard always places in a safe spot, whole bot-vs-bot games with fixed seeds (hard beats easy in 22 of 22 games on all three fields), determinism.
 - `engine.test.js` (29 tests): the engine: shapes (2000 random shapes are valid, solid, balanced, with N/S poles inside the body), placing (field, wall, clearance, invalid numbers), forces (Newton's third law, translation invariance), attraction range, friction that holds distant magnets, repulsion, the joined-group detection, returns including the opponent's magnets, determinism, and 14 random full games (no NaN, magnets stay in the field and never sink into each other, none is lost or duplicated, speed and payload size).
-- `test.js` (62 tests): the server over HTTP: rooms and field sizes, move validation, placing, joins and returns to the hand, winning with an empty hand, the move limit, a blocked field, resigning, rematch, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
+- `test.js` (71 tests): the server over HTTP: rooms and field sizes, a room against the computer (instant start, no chat, the computer places by itself, rematch), move validation, placing, joins and returns to the hand, winning with an empty hand, the move limit, a blocked field, resigning, rematch, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
 
 ## 11. Project structure (for developers)
 
 ```
 Magnets/
+├── bot.js                 the computer opponent (server side): safe spots, denial of safe spots, simulation of risky moves
+├── bot.test.js            computer opponent tests
 ├── engine.test.js         engine tests
 ├── server.js              HTTP server: rooms, turns, hands, limits, tunnel, shutdown (no dependencies)
 ├── test.js                server integration test
@@ -205,13 +212,15 @@ Magnets/
     └── vendor/qrcode.js   QR code generator (qrcode-generator, MIT, bundled unchanged)
 ```
 
+**The computer opponent (`bot.js`).** A magnet placed in a "safe spot" (the engine's preview says nothing exceeds the static friction) does not move and cannot join anything, so it shrinks the hand by one; safe spots run out as the field fills, and whoever has to move when there are none risks a join. The **hard** computer therefore places its most awkward magnet (the one with the fewest safe spots) in the safe spot that leaves the opponent the fewest safe spots, and when there is no safe spot it simulates risky moves with the full physics and picks the cheapest one. The **easy** computer puts a random magnet in a random safe spot and makes a random mistake every third move.
+
 **How it works.** A magnet is a rigid body made of 2-3 discs (mass proportional to area) with two point poles of opposite charge. Between the poles of every pair of magnets acts a force `K·q₁·q₂ / (d² + ε²)` (attraction for opposite signs); it also produces a torque. The table gives dry friction: a magnet at rest moves only when its acceleration exceeds a threshold, so distant magnets lie still. The simulation runs at 240 steps per second with impulse-based collisions (restitution, tangential friction) and walls. A phase ends when everything is quiet (small tremors of already joined magnets do not count). Then the server finds groups of **touching** magnets, removes all of them to the hand of the player who caused them, and runs the movement of the remaining magnets again (up to five rounds). The server sends the room state with the **seed** (the client rebuilds the same shapes) and, after a move, **phases** with the frames (30 per second, only for magnets that moved) and the sound events; clients interpolate them. The server keeps room state in memory; clients receive changes through an **SSE** stream (or **long-polling** when the stream does not arrive, e.g. through a tunnel).
 
 **HTTP interface:**
 
 | Method and address | Description |
 |---|---|
-| `POST /api/create` (`{field: s/m/l}`), `/api/join` | create a room and join it (code → player token) |
+| `POST /api/create` (`{field: s/m/l, vs: friend/bot, level: easy/hard}`), `/api/join` | create a room and join it (code → player token) |
 | `POST /api/place` (`{id, x, y, a}`: magnet number from your hand, centre of mass, angle in radians) | place a magnet |
 | `POST /api/resign`, `/api/rematch` | resign, rematch (new shapes) |
 | `POST /api/chat` | chat message |

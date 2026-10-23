@@ -1,7 +1,7 @@
 'use strict';
 // Test integracyjny serwera gry Kropki: uruchamia serwer na wolnym porcie i gra dwoma "graczami" przez HTTP.
 const assert = require('assert');
-const { server, hooks, SIZES, CODE_LEN, LIMITS, tunnel } = require('./server');
+const { server, hooks, rooms, SIZES, CODE_LEN, LIMITS, tunnel } = require('./server');
 
 let base, n = 0;
 const ok = m => console.log('  ok', ++n, m);
@@ -141,6 +141,50 @@ async function main() {
   const ts = await T.st(T.red);
   assert.strictEqual(ts.phase, 'over'); assert.strictEqual(ts.reason, 'nomoves'); assert.strictEqual(ts.draw, true); ok('brak ruchów (pełna plansza) kończy grę: remis 0:0');
   delete SIZES.t;
+
+  // ---------- komputer jako przeciwnik ----------
+  for (const bad of [{ vs: 'x' }, { vs: 5 }, { vs: 'bot', level: 'zz' }, { vs: 'bot', level: 7 }, { vs: 'bot', level: '__proto__' }, { vs: null }]) assert.strictEqual((await post('/api/create', bad)).status, 400);
+  ok('nieprawidłowy przeciwnik lub poziom komputera odrzucony (także __proto__)');
+  const botRoom = async (level, size) => { const c = (await post('/api/create', { vs: 'bot', level, size: size || 's' })).body; const P = { code: c.code, token: c.token }; return { P, st: async () => (await get(`/api/state?code=${P.code}&token=${P.token}`)).body, mv: (x, y) => post('/api/move', Object.assign({ x, y }, P)), room: rooms.get(c.code) }; };
+  const BR = await botRoom('hard');
+  let bst = await BR.st();
+  assert.strictEqual(bst.vsBot, true); assert.strictEqual(bst.botLevel, 'hard'); assert.strictEqual(bst.phase, 'playing'); assert.strictEqual(bst.opponentJoined, true); assert.strictEqual(bst.opponentConnected, true); assert.strictEqual(bst.you, 0); ok('pokój z komputerem: gra startuje od razu, przeciwnik jest dołączony i zawsze "na linii"');
+  assert.strictEqual((await post('/api/join', { code: BR.P.code })).body.code, 'room_full'); ok('do pokoju z komputerem nikt trzeci nie dołączy');
+  assert.strictEqual((await post('/api/chat', Object.assign({ text: 'hej' }, BR.P))).body.code, 'no_opponent'); ok('z komputerem nie ma czatu');
+  assert.ok(!JSON.stringify(bst).includes(BR.room.players[1].token)); ok('token komputera nigdy nie trafia do gracza');
+  const tb = Date.now();
+  if (bst.turn === 1) assert.ok(await (async () => { for (let k = 0; k < 60; k++) { bst = await BR.st(); if (bst.moves >= 1) return true; await sleep(100); } return false; })(), 'komputer zaczynający nie ruszył');
+  else {
+    assert.strictEqual((await BR.mv(7, 7)).status, 200);
+    assert.ok(await (async () => { for (let k = 0; k < 60; k++) { bst = await BR.st(); if (bst.moves >= 2 && bst.turn === 0) return true; await sleep(100); } return false; })(), 'komputer nie odpowiedział ruchem');
+  }
+  assert.ok(bst.moves >= 1 && bst.last && bst.last.by === 1); ok(`komputer sam stawia kropkę po chwili namysłu (${((Date.now() - tb) / 1000).toFixed(1)} s), a ruch trafia do gracza jak każdy inny`);
+  assert.ok(Date.now() - tb >= 600); ok('komputer nie odpowiada natychmiast (jest chwila "namysłu")');
+  // kilka wymian: komputer za każdym razem gra legalnie, a kropki rosną
+  for (let i = 0; i < 3; i++) {
+    bst = await BR.st(); if (bst.turn !== 0) { for (let k = 0; k < 60 && bst.turn !== 0; k++) { await sleep(100); bst = await BR.st(); } }
+    const free = []; for (let y = 0; y < bst.h && free.length < 1; y++) for (let x = 0; x < bst.w; x++) if (bst.board[y][x] === '.') { free.push([x, y]); break; }
+    await BR.mv(free[0][0], free[0][1]);
+    for (let k = 0; k < 80; k++) { await sleep(100); bst = await BR.st(); if (bst.turn === 0) break; }
+  }
+  const dots = bst.board.join('').replace(/\./g, '').length; assert.ok(dots >= 6 && bst.phase === 'playing'); ok('po kilku wymianach plansza ma ' + dots + ' kropek, a gra trwa bez błędów');
+  // propozycja zakończenia: przy remisie komputer się zgadza
+  clearTimeout(BR.room.botTimer); BR.room.botTimer = null;
+  for (let k = 0; k < 80 && bst.turn !== 0; k++) { await sleep(100); bst = await BR.st(); }
+  BR.room.game.score[1] = 0; BR.room.game.score[2] = 0;
+  assert.strictEqual((await post('/api/offer', Object.assign({ action: 'offer' }, BR.P))).status, 200);
+  assert.ok(await (async () => { for (let k = 0; k < 60; k++) { bst = await BR.st(); if (bst.phase === 'over') return true; await sleep(100); } return false; })(), 'komputer nie odpowiedział na propozycję'); assert.strictEqual(bst.reason, 'agreed'); ok('komputer zgadza się na zakończenie gry i policzenie punktów, gdy nie przegrywa (przy remisie)');
+  // rewanż: komputer zgadza się od razu
+  assert.strictEqual((await post('/api/rematch', BR.P)).status, 200); bst = await BR.st();
+  assert.strictEqual(bst.phase, 'playing'); assert.strictEqual(bst.moves, 0); ok('rewanż z komputerem startuje od razu po jednym kliknięciu (komputer zgadza się zawsze)');
+  clearTimeout(BR.room.botTimer);
+  // odmowa, gdy komputer przegrywa
+  const LR = await botRoom('easy'); let lst = await LR.st();
+  for (let k = 0; k < 80 && lst.turn !== 0; k++) { await sleep(100); lst = await LR.st(); }
+  const humanColor = lst.colors[0], botColor = lst.colors[1]; LR.room.game.score[humanColor] = 3; LR.room.game.score[botColor] = 0;
+  assert.strictEqual((await post('/api/offer', Object.assign({ action: 'offer' }, LR.P))).status, 200);
+  assert.ok(await (async () => { for (let k = 0; k < 60; k++) { lst = await LR.st(); if (lst.endOffer === null) return true; await sleep(100); } return false; })()); assert.strictEqual(lst.phase, 'playing'); ok('komputer odmawia zakończenia gry, gdy przegrywa (propozycja znika, gra trwa dalej)');
+  clearTimeout(LR.room.botTimer);
 
   // ---------- long-poll ----------
   LIMITS.pollMs = 400;

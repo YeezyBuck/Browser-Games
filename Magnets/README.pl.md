@@ -4,7 +4,7 @@
 
 Gra na nerwy i magnetyzm dla **dwóch osób**: w sieci domowej albo **przez internet**. Każdy ma **10 nieregularnych magnesów**, a pole jest niewielkie. Na zmianę stawiacie **po jednym magnesie**, ale magnesy się przyciągają i odpychają. Gdy po uspokojeniu magnesy się **połączą**, cała grupa **wraca do ręki gracza, który to wywołał**, także magnesy przeciwnika. **Wygrywa ten, kto pierwszy pozbędzie się wszystkich swoich magnesów.** W grze są: czat, kod QR do dołączania z telefonu, interfejs po polsku i angielsku, stalowa płyta z delikatnym tłem z linii pola magnetycznego, spokojna „laboratoryjna” muzyka, efekty dźwiękowe i fajerwerki dla zwycięzcy.
 
-Nie trzeba instalować żadnych bibliotek: wystarczy **Node.js**. Serwer jest sędzią: liczy fizykę każdego postawionego magnesu, wykrywa połączone grupy i przekazuje wynik obu graczom. Gra powstała na bazie [WarShips](../WarShips/README.pl.md), [Dots](../Dots/README.pl.md) i [CapRace](../CapRace/README.pl.md) i korzysta z ich infrastruktury (pokoje, tunel Cloudflare, czat, zabezpieczenia).
+Można grać **ze znajomym** albo **z komputerem** (poziom łatwy lub trudny). Nie trzeba instalować żadnych bibliotek: wystarczy **Node.js**. Serwer jest sędzią: liczy fizykę każdego postawionego magnesu, wykrywa połączone grupy i przekazuje wynik obu graczom. Gra powstała na bazie [WarShips](../WarShips/README.pl.md), [Dots](../Dots/README.pl.md) i [CapRace](../CapRace/README.pl.md) i korzysta z ich infrastruktury (pokoje, tunel Cloudflare, czat, zabezpieczenia).
 
 <p align="center">
   <img src="../docs/screenshots/magnets-aim.jpg" width="48%" alt="Magnesy: stawianie magnesu przy magnesie przeciwnika, z liniami sił i ostrzeżeniem">
@@ -87,6 +87,8 @@ Potrzebne są dwie osoby (albo dwie karty przeglądarki, żeby spróbować samem
 2. Wybierz **wielkość pola** i kliknij **Utwórz grę**. Pojawi się **6-literowy kod gry** oraz gotowe linki do przekazania przeciwnikowi (🌐 przez internet razem z kodem QR, 🏠 w sieci domowej).
 3. Wyślij znajomemu odpowiedni link (**Kopiuj**) i poczekaj, aż dołączy.
 
+**Gra z komputerem:** w tym samym panelu ustaw **Przeciwnik: Komputer** i wybierz **poziom** (łatwy albo trudny). Gra startuje od razu: nie ma kodu, linku, kodu QR ani czatu, a komputer zawsze zgadza się na rewanż.
+
 ### Gracz 2 – dołącza
 Otwórz link od gracza 1 (kod wpisze się sam) albo otwórz stronę gry, wpisz kod w polu **Dołącz do gry** i kliknij **Dołącz**. Na telefonie możesz zeskanować kod QR.
 
@@ -123,6 +125,7 @@ Warto wiedzieć: adres tunelu jest **tymczasowy** (za każdym razem inny), a kom
 | Rewanż | **Zagraj ponownie** po zakończeniu gry |
 | Zmiana języka | przyciski **Polski / English** u góry (zapamiętywane) |
 | Samouczek | przycisk **❓ Jak grać** u góry; otwiera się też sam przy pierwszej wizycie. Sześć krótkich kroków z animacjami (cel, bieguny, stawianie, połączenia, tury i koniec, wskazówki), po polsku i angielsku; cztery animacje liczy prawdziwy silnik gry (także mapę bezpiecznych miejsc); działają strzałki i Esc |
+| Przeciwnik komputerowy | **Przeciwnik: Komputer** przy tworzeniu gry, poziom **Łatwy** albo **Trudny**; komputer chwilę „myśli” przed każdym ruchem |
 | Czat | przycisk 💬 w lewym dolnym rogu; Enter wysyła, Esc zamyka; do 200 znaków |
 | Muzyka / efekty | przyciski 🎵 / 🔊 (zapamiętywane); muzyka: oryginalny, spokojny „laboratoryjny” kawałek generowany w przeglądarce (92 uderzenia na minutę); dźwięki: postawienie, stuknięcie magnesów, uderzenie w bandę, „ding” sklejenia, powrót magnesów, koniec gry |
 | Kopiowanie linku | **Kopiuj** w panelu oczekiwania albo **Kopiuj link** u góry |
@@ -165,6 +168,7 @@ Tło (delikatne linie pola magnetycznego) jest rysowane raz, bez animacji. Iskry
 
 Stałe fizyki (siła magnesów, tarcie, wielkości pól, liczba magnesów, limit ruchów) są w obiekcie `P` w `public/engine.js`, a limity serwera w obiekcie `LIMITS` w `server.js`.
 
+- **Komputer gra według tych samych zasad:** działa na serwerze i stawia magnesy tą samą, sprawdzaną drogą co ruch człowieka, więc nie może oszukiwać. Jego token nigdy nie trafia do przeglądarki.
 - **Serwer decyduje o wszystkim:** liczy cały ruch po każdym postawionym magnesie i wykrywa połączone grupy; klient wysyła tylko numer magnesu, położenie i kąt, a wynik odtwarza, więc nie może oszukiwać. Każda liczba od klienta jest sprawdzana (tylko skończone liczby, magnes musi być w Twojej ręce, miejsce musi być wolne), a ruch przyjmowany jest tylko w Twojej kolejce i dopiero po zakończeniu poprzedniego ruchu magnesów.
 - **6-literowy kod pokoju**, limit prób dołączenia (12/min na IP), limit zakładania pokoi (10 na 10 min na IP), maks. 300 pokoi, limit żądań (600/min na IP), limit ruchów (3/s na gracza), limit połączeń na żywo; pokoje wygasają po 3 godzinach bezczynności.
 - **Czat:** do 200 znaków, 6 wiadomości na 10 s, tylko zwykły tekst (bez HTML), znaki sterujące i niewidoczne usuwane.
@@ -178,15 +182,18 @@ Stałe fizyki (siła magnesów, tarcie, wielkości pól, liczba magnesów, limit
 
 ```
 cd Magnets
-npm test                 # = node engine.test.js && node test.js
+npm test                 # = node engine.test.js && node bot.test.js && node test.js
 ```
+- `bot.test.js` (7 testów): przeciwnik komputerowy: każda decyzja to legalny ruch, szybkość (trudny najwyżej ok. 0,8 s), na początku partii trudny zawsze stawia w bezpiecznym miejscu, całe partie bot kontra bot z ustalonymi seedami (trudny wygrywa z łatwym w 22 z 22 partii na wszystkich trzech polach), determinizm.
 - `engine.test.js` (29 testów): silnik: kształty (2000 losowych kształtów jest poprawnych, zwartych, wyważonych, z biegunami N/S wewnątrz bryły), stawianie (pole, banda, odstęp, błędne liczby), siły (trzecia zasada dynamiki, niezmienniczość przy przesunięciu), zasięg przyciągania, tarcie trzymające odległe magnesy, odpychanie, wykrywanie połączonych grup, zwroty wraz z magnesami przeciwnika, determinizm oraz 14 losowych pełnych partii (brak NaN, magnesy zostają w polu i nie wchodzą głęboko w siebie, żaden nie ginie ani się nie dubluje, czas i rozmiar danych).
-- `test.js` (62 testy): serwer przez HTTP: pokoje i wielkości pola, walidacja ruchów, stawianie, połączenia i zwroty do ręki, wygrana z pustą ręką, limit ruchów, zablokowane pole, poddanie się, rewanż, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
+- `test.js` (71 testów): serwer przez HTTP: pokoje i wielkości pola, pokój z komputerem (natychmiastowy start, brak czatu, komputer stawia sam, rewanż), walidacja ruchów, stawianie, połączenia i zwroty do ręki, wygrana z pustą ręką, limit ruchów, zablokowane pole, poddanie się, rewanż, long-polling, czat, limity, zabezpieczenia, zamykanie oraz tłumaczenia i samouczek.
 
 ## 11. Struktura projektu (dla programistów)
 
 ```
 Magnets/
+├── bot.js                 przeciwnik komputerowy (po stronie serwera): bezpieczne miejsca, odbieranie ich rywalowi, symulacja ryzykownych ruchów
+├── bot.test.js            testy przeciwnika komputerowego
 ├── engine.test.js         testy silnika
 ├── server.js              serwer HTTP: pokoje, kolejka, ręce, limity, tunel, zamykanie (bez zależności)
 ├── test.js                test integracyjny serwera
@@ -205,13 +212,15 @@ Magnets/
     └── vendor/qrcode.js   generator kodów QR (qrcode-generator, MIT, dołączony bez zmian)
 ```
 
+**Przeciwnik komputerowy (`bot.js`).** Magnes położony w „bezpiecznym miejscu” (podgląd silnika: nic nie przekracza tarcia spoczynkowego) nie rusza się i nie może się z niczym połączyć, więc zmniejsza rękę o jeden; bezpiecznych miejsc ubywa wraz z zapełnianiem pola, a kto musi ruszać, gdy ich nie ma, ryzykuje połączenie. **Trudny** komputer stawia więc swój najbardziej kłopotliwy magnes (ten z najmniejszą liczbą bezpiecznych miejsc) w takim bezpiecznym miejscu, które zostawia przeciwnikowi jak najmniej bezpiecznych miejsc, a gdy bezpiecznych nie ma, symuluje ryzykowne ruchy pełną fizyką i wybiera najtańszy. **Łatwy** komputer stawia losowy magnes w losowym bezpiecznym miejscu i co trzeci ruch popełnia losowy błąd.
+
 **Jak to działa.** Magnes to bryła sztywna z 2-3 krążków (masa proporcjonalna do pola) z dwoma punktowymi biegunami o przeciwnych ładunkach. Między biegunami każdej pary magnesów działa siła `K·q₁·q₂ / (d² + ε²)` (przyciąganie dla przeciwnych znaków), która daje też moment obrotowy. Stół ma tarcie suche: magnes w spoczynku rusza dopiero wtedy, gdy jego przyspieszenie przekroczy próg, więc odległe magnesy leżą spokojnie. Symulacja działa w 240 krokach na sekundę, ze zderzeniami impulsowymi (sprężystość, tarcie styczne) i bandami. Faza kończy się, gdy wszystko ucichnie (drobne drgania już połączonych magnesów się nie liczą). Wtedy serwer znajduje grupy **dotykających się** magnesów, odsyła je wszystkie do ręki gracza, który je wywołał, i liczy ruch pozostałych od nowa (do pięciu rund). Serwer wysyła stan pokoju z **seedem** (klient odtwarza te same kształty), a po ruchu **fazy** z klatkami (30 na sekundę, tylko dla magnesów, które się ruszyły) i zdarzeniami dźwiękowymi; klienci je interpolują. Serwer trzyma stan pokoi w pamięci; klienci dostają zmiany strumieniem **SSE** (albo **long-pollingiem**, gdy strumień nie dochodzi, np. przez tunel).
 
 **Interfejs HTTP:**
 
 | Metoda i adres | Opis |
 |---|---|
-| `POST /api/create` (`{field: s/m/l}`), `/api/join` | utworzenie pokoju i dołączenie (kod → token gracza) |
+| `POST /api/create` (`{field: s/m/l, vs: friend/bot, level: easy/hard}`), `/api/join` | utworzenie pokoju i dołączenie (kod → token gracza) |
 | `POST /api/place` (`{id, x, y, a}`: numer magnesu z ręki, środek ciężkości, kąt w radianach) | postawienie magnesu |
 | `POST /api/resign`, `/api/rematch` | poddanie się, rewanż (nowe kształty) |
 | `POST /api/chat` | wiadomość czatu |

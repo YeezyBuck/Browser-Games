@@ -177,7 +177,7 @@ function updateBadge() {
 }
 function renderChat(prevLastId) {
   const box = $('#chat');
-  const show = !!state && state.opponentJoined;
+  const show = !!state && state.opponentJoined && !state.vsBot;     // z komputerem nie ma czatu
   box.hidden = !show;
   if (!show) { if (chatOpen) setChatOpen(false); return; }
   const msgs = state.chat || [];
@@ -325,6 +325,7 @@ function renderGame(s) {
   const me = s.you, opp = 1 - s.you, playing = s.phase === 'playing', over = s.phase === 'over';
   const cls = c => (c === 1 ? 'red' : c === 2 ? 'blue' : '');
   $('#cardYou').className = 'pcard ' + cls(s.colors[me]) + (playing && s.turn === me ? ' turn' : '');
+  const who = $('#cardOpp .who'); who.dataset.i18n = s.vsBot ? 'game.bot' : 'game.opp'; who.textContent = t(who.dataset.i18n);
   $('#cardOpp').className = 'pcard ' + cls(s.colors[opp]) + (playing && s.turn === opp ? ' turn' : '');
   $('#colYou').textContent = '(' + t(s.colors[me] === 1 ? 'color.red' : 'color.blue') + ')';
   $('#colOpp').textContent = '(' + t(s.colors[opp] === 1 ? 'color.red' : 'color.blue') + ')';
@@ -366,7 +367,7 @@ function render() {
     $('#chat').hidden = true; setChatOpen(false); chatSeen = null; chatRendered = '';
     return;
   }
-  roomInfo.hidden = false;
+  roomInfo.hidden = !!state.vsBot;                                   // z komputerem nie ma kogo zapraszać
   $('#roomCode').textContent = state.code;
   const s = state;
   if (s.phase === 'waiting') {
@@ -378,7 +379,7 @@ function render() {
   }
   show('game');
   renderGame(s);
-  if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : 'banner.oppTurn'));
+  if (s.phase === 'playing') banner(t(s.turn === s.you ? 'banner.yourTurn' : (s.vsBot ? 'banner.botTurn' : 'banner.oppTurn')));
   else { const [text, cls] = resultBanner(s); banner(text, cls); }
   if (s.opponentJoined && !s.opponentConnected && s.phase !== 'over') banner(t('banner.oppGone'), 'warn');
 }
@@ -489,9 +490,12 @@ $('#resignBtn').addEventListener('click', () => { if (confirm(t('resign.confirm'
 $('#rematchBtn').addEventListener('click', act('/api/rematch'));
 $('#fireworksBtn').addEventListener('click', () => Fireworks.start());
 
+$('#oppSelect').addEventListener('change', () => { $('#levelRow').hidden = $('#oppSelect').value !== 'bot'; });
 $('#createBtn').addEventListener('click', async () => {
   audio();
-  try { enter(await api('/api/create', { size: $('#sizeSelect').value })); } catch (e) { toast(errorText(e)); }
+  const body = { size: $('#sizeSelect').value };
+  if ($('#oppSelect').value === 'bot') { body.vs = 'bot'; body.level = $('#levelSelect').value; }
+  try { enter(await api('/api/create', body)); } catch (e) { toast(errorText(e)); }
 });
 $('#joinForm').addEventListener('submit', async ev => {
   ev.preventDefault();

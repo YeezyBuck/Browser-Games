@@ -4,7 +4,7 @@
 
 The playground classic, **bottle-cap racing**, for **two players**: on your home network or **over the internet**. Each player has one bottle cap and the two of you race along a **randomly generated track** drawn in chalk on the asphalt. You flick your cap with the mouse (or a finger): **where you hit it** decides the spin and **how far you pull the cursor back** decides the power. The first cap over the finish line wins. The game has a built-in chat, a QR code for joining from a phone, a Polish and English interface, chalk drawings on the track and in the background, driving electronic racing music, sound effects and fireworks for the winner.
 
-No libraries to install: all you need is **Node.js**. The server is the referee: it generates the track, computes the physics of every flick and tells both players the result. The game is built on top of [WarShips](../WarShips/README.md) and [Dots](../Dots/README.md) and shares their infrastructure (rooms, Cloudflare tunnel, chat, security).
+You can play **against a friend** or **against the computer** (easy or hard). No libraries to install: all you need is **Node.js**. The server is the referee: it generates the track, computes the physics of every flick and tells both players the result. The game is built on top of [WarShips](../WarShips/README.md) and [Dots](../Dots/README.md) and shares their infrastructure (rooms, Cloudflare tunnel, chat, security).
 
 <p align="center">
   <img src="../docs/screenshots/caprace-aim.jpg" width="48%" alt="Cap Race: aiming a flick, with the preview of the flight path">
@@ -88,6 +88,8 @@ You need two people (or two browser tabs to try it out alone).
 2. Choose the **track length** and **who flicks**, then click **Create game**. A **6-letter game code** appears, with ready-made links to give your opponent (🌐 over the internet together with a QR code, 🏠 on the home network).
 3. Send your friend the right link (**Copy**) and wait for them to join.
 
+**Playing against the computer:** in the same panel set **Opponent: Computer** and pick the **level** (easy or hard). The game starts at once: there is no code, link, QR code or chat, and the computer always agrees to a rematch.
+
 ### Player 2 – joins
 Open the link from player 1 (the code fills in automatically), or open the game page, type the code into **Join a game** and click **Join**. On a phone you can scan the QR code.
 
@@ -119,6 +121,7 @@ Good to know: the tunnel address is **temporary** (it changes every time), and t
 | Rematch | **Play again (new track)** after the game |
 | Language | **Polski / English** buttons at the top (remembered) |
 | Tutorial | **❓ How to play** button at the top; it also opens by itself on your first visit. Six short steps with animations (goal, flicking, spin, track and walls, turns and collisions, tips), in Polish and English; arrow keys and Esc work |
+| Computer opponent | **Opponent: Computer** when creating a game, level **Easy** or **Hard**; the computer thinks for a moment before each flick |
 | Chat | 💬 button at the bottom left; Enter sends, Esc closes; up to 200 characters |
 | Music / effects | 🎵 / 🔊 buttons (remembered); music: an original electronic "race" track generated in the browser (about 126 bpm); sounds: flick, wall bounce, clink of caps, finish |
 | Copying the link | **Copy** in the waiting panel or **Copy link** at the top |
@@ -161,6 +164,7 @@ The chalk drawings (on the track: arrows, stars, smileys, hopscotch, skid marks,
 
 Physics constants (cap size, track width, friction, spin, flick limit) are in the `P` object of `public/engine.js`, and server limits in the `LIMITS` object of `server.js`.
 
+- **The computer opponent plays by the same rules:** it runs on the server, picks its flick with the same physics and sends it through the same checked path as a human move, so it cannot cheat. Its token never reaches the browser.
 - **The server decides everything:** it draws the track seed, computes the whole flight of every flick and the finish; the client only sends the hit spot and the pull and replays the result, so it cannot cheat. Every number from the client is checked (finite numbers only, clamped), a flick is accepted only on your turn and only after the previous flight has ended.
 - **6-letter room code**, join-attempt limit (12/min per IP), room-creation limit (10 per 10 min per IP), at most 300 rooms, request limit (600/min per IP), flick limit (3/s per player), live-connection limit; rooms expire after 3 hours of inactivity.
 - **Chat:** up to 200 characters, 6 messages per 10 s, plain text only (no HTML), control and invisible characters removed.
@@ -174,15 +178,18 @@ Physics constants (cap size, track width, friction, spin, flick limit) are in th
 
 ```
 cd CapRace
-npm test                 # = node engine.test.js && node test.js
+npm test                 # = node engine.test.js && node bot.test.js && node test.js
 ```
+- `bot.test.js` (7 tests): the computer opponent: every decision is a legal flick, speed (hard at most about 0.1 s), it finishes the race when the finish is within reach, whole bot-vs-bot games with fixed seeds (hard beats easy in 14 of 16 games with turns and in 21 of 24 with the "whoever is behind" rule), determinism.
 - `engine.test.js` (31 tests): the engine: the same seed gives the same track, 450 random tracks (length, no overlapping corridors, smooth curve), the flick input (cancel, clamping, spin sign), the range and the curve of a flick, collisions (momentum, no energy gain, caps never overlap), 1000 random flicks on 40 tracks (the cap never leaves the track), the finish, determinism, who flicks, and the chalk drawings (deterministic, on the track and clear of the walls).
-- `test.js` (61 tests): the server over HTTP: rooms and settings, flick validation, the busy lock, both turn rules, the finish, the flick limit, resigning, rematch, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
+- `test.js` (70 tests): the server over HTTP: rooms and settings, a room against the computer (instant start, no chat, the computer flicks by itself, rematch), flick validation, the busy lock, both turn rules, the finish, the flick limit, resigning, rematch, long-polling, chat, limits, security, shutdown, and the translations and tutorial.
 
 ## 11. Project structure (for developers)
 
 ```
 CapRace/
+├── bot.js                 the computer opponent (server side): tries many flicks with the real physics and picks the best
+├── bot.test.js            computer opponent tests
 ├── engine.test.js         engine tests
 ├── server.js              HTTP server: rooms, turns, limits, tunnel, shutdown (no dependencies)
 ├── test.js                server integration test
@@ -201,13 +208,15 @@ CapRace/
     └── vendor/qrcode.js   QR code generator (qrcode-generator, MIT, bundled unchanged)
 ```
 
+**The computer opponent (`bot.js`).** The physics is deterministic and fast (about 1 ms per flick), so the computer "imagines" a few hundred flicks (directions towards the next points of the track × power × spin), simulates them with the same engine and picks the best by progress, how far it pushes the rival back, and distance from the walls. With the "whoever is behind" rule it also plays tactically: it creeps up behind the rival without overtaking unless it has to, overtakes by a small margin, and never lets the rival finish from the spot. The easy level tries only a dozen flicks and adds an aiming error.
+
 **How it works.** The track is a centre curve built from straights and gentle arcs (radius at least 130, so it is never sharper than the track is wide) sampled every 8 units; the generator retries with the next seed if two parts of the track come close. A cap is "on the track" while its centre is closer than `halfW - capR` to the curve, so the walls are round and there are no shortcuts. Physics (120 steps per second): constant plus proportional friction, a heading that turns with the decaying spin, impulses for collisions with the walls (restitution 0.6) and between caps (0.9). The server sends the room state with the track **seed** (the client rebuilds the same track) and, after a flick, the **trajectory** sampled at 30 frames per second plus sound events; clients interpolate it. The server keeps room state in memory; clients receive changes through an **SSE** stream (or **long-polling** when the stream does not arrive, e.g. through a tunnel).
 
 **HTTP interface:**
 
 | Method and address | Description |
 |---|---|
-| `POST /api/create` (`{len: s/m/l, rule: last/alternate}`), `/api/join` | create a room and join it (code → player token) |
+| `POST /api/create` (`{len: s/m/l, rule: last/alternate, vs: friend/bot, level: easy/hard}`), `/api/join` | create a room and join it (code → player token) |
 | `POST /api/shoot` (`{hx, hy, px, py}`: hit spot on the cap −1..1, pull vector) | flick the cap |
 | `POST /api/resign`, `/api/rematch` | resign, rematch (new track) |
 | `POST /api/chat` | chat message |

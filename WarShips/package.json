@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.js --tunnel --open",
     "local": "node server.js --open",
-    "test": "node test.js"
+    "test": "node bot.test.js && node test.js"
   },
   "private": true,
   "license": "MIT",

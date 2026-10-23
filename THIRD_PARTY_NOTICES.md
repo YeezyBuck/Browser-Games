@@ -4,7 +4,7 @@
 
 ### qrcode-generator 2.0.4
 
-Used for the QR codes in the multiplayer games (`WarShips/public/vendor/qrcode.js`, `Dots/public/vendor/qrcode.js`, `CapRace/public/vendor/qrcode.js`, copied unchanged).
+Used for the QR codes in the multiplayer games (`WarShips/public/vendor/qrcode.js`, `Dots/public/vendor/qrcode.js`, `CapRace/public/vendor/qrcode.js`, `Magnets/public/vendor/qrcode.js`, copied unchanged).
 
 - Project: <https://github.com/kazuhikoarase/qrcode-generator>
 - Copyright (c) 2009 Kazuhiko Arase

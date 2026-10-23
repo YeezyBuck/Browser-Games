@@ -11,6 +11,6 @@ labels: enhancement
 **Why would it be useful? / Dlaczego byłoby to przydatne?**
 
 
-**Which game? / Której gry dotyczy?** WarShips / Dots / CapRace / TicTacToe / new game / nowa gra
+**Which game? / Której gry dotyczy?** WarShips / Dots / CapRace / Magnets / TicTacToe / new game / nowa gra
 
 > Reminder: the games intentionally have no runtime dependencies. / Przypomnienie: gry celowo nie mają zależności uruchomieniowych.

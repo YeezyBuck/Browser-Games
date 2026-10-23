@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Magnesy</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Cpath d=%27M20 70V40a30 30 0 0 1 60 0v30H62V40a12 12 0 0 0-24 0v30z%27 fill=%27%23d9d9e3%27/%3E%3Crect x=%2720%27 y=%2770%27 width=%2718%27 height=%2716%27 fill=%27%23e0533d%27/%3E%3Crect x=%2762%27 y=%2770%27 width=%2718%27 height=%2716%27 fill=%27%233f7bd8%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="field" aria-hidden="true"></canvas>
+<canvas id="fireworks" aria-hidden="true" hidden></canvas>
+<header>
+  <h1 data-i18n="h1">🧲 Magnesy</h1>
+  <div class="head-right">
+    <div id="roomInfo" hidden><span data-i18n="room">Pokój:</span> <strong id="roomCode"></strong> <button id="copyLink" type="button" data-i18n="copyLink">Kopiuj link</button></div>
+    <button id="quitBtn" class="danger" type="button" hidden data-i18n="quit.btn" data-i18n-title="quit.title" title="Wyłącz serwer i tunel">⏻ Zamknij grę</button>
+    <button id="tutBtn" type="button" data-i18n="tut.btn" data-i18n-title="tut.btnTitle" title="Pokaż zasady i samouczek">❓ Jak grać</button>
+    <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Język">
+      <button type="button" data-lang="pl" aria-pressed="true">🇵🇱 Polski</button>
+      <button type="button" data-lang="en" aria-pressed="false">🇬🇧 English</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div id="banner" role="status" aria-live="polite"></div>
+
+  <section id="lobby" hidden>
+    <div class="card">
+      <h2 data-i18n="lobby.new">Nowa gra</h2>
+      <p data-i18n="lobby.newText">Utwórz grę i wyślij znajomemu kod lub link.</p>
+      <label class="pick"><span data-i18n="lobby.field">Wielkość pola</span>
+        <select id="fieldSelect">
+          <option value="s" data-i18n="field.s">Małe (trudniejsze)</option>
+          <option value="m" data-i18n="field.m" selected>Średnie</option>
+          <option value="l" data-i18n="field.l">Duże (łatwiejsze)</option>
+        </select>
+      </label>
+      <button id="createBtn" class="primary" type="button" data-i18n="lobby.create">Utwórz grę</button>
+    </div>
+    <div class="card">
+      <h2 data-i18n="lobby.join">Dołącz do gry</h2>
+      <p data-i18n="lobby.joinText">Wpisz kod od znajomego.</p>
+      <form id="joinForm">
+        <input id="joinCode" maxlength="6" autocomplete="off" autocapitalize="characters" placeholder="KOD" data-i18n-placeholder="lobby.code" data-i18n-aria="lobby.codeAria" aria-label="Kod gry">
+        <button class="primary" type="submit" data-i18n="lobby.joinBtn">Dołącz</button>
+      </form>
+    </div>
+    <details class="card rules" open>
+      <summary data-i18n="rules.title">Zasady gry</summary>
+      <ul>
+        <li data-i18n="rules.1">Każdy ma 10 magnesów. Na zmianę stawiacie po jednym na małym polu. Wygrywa ten, kto pierwszy pozbędzie się wszystkich.</li>
+        <li data-i18n="rules.2">Magnesy mają bieguny N (czerwony) i S (niebieski): różne się przyciągają, jednakowe odpychają.</li>
+        <li data-i18n="rules.3">Gdy po uspokojeniu magnesy się dotykają, cała grupa wraca do gracza, który to wywołał (także magnesy przeciwnika).</li>
+        <li data-i18n="rules.4">Daleko od innych magnesów leżą spokojnie, bliżej zaczynają się przesuwać i sklejać.</li>
+      </ul>
+    </details>
+  </section>
+
+  <section id="waiting" hidden>
+    <div class="card">
+      <h2 data-i18n="wait.title">Czekam na przeciwnika…</h2>
+      <p><span data-i18n="wait.give">Kod gry:</span> <strong class="big" id="waitCode"></strong></p>
+      <p class="share-intro" data-i18n="share.intro">Przekaż przeciwnikowi jeden z adresów – zależy, gdzie jest:</p>
+      <div id="shareBox"></div>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <div class="scorebar">
+      <div class="pcard" id="cardYou">
+        <div class="prow"><span class="swatch" id="swYou"></span><span class="who" data-i18n="game.you">Ty</span><span class="moves" id="movesYou"></span></div>
+        <div class="count"><strong id="handYou">10</strong><span id="handYouLabel"></span></div>
+      </div>
+      <div class="pcard" id="cardOpp">
+        <div class="prow"><span class="swatch" id="swOpp"></span><span class="who" data-i18n="game.opp">Przeciwnik</span><span class="moves" id="movesOpp"></span></div>
+        <div class="count"><strong id="handOpp">10</strong><span id="handOppLabel"></span></div>
+      </div>
+    </div>
+    <div class="board-wrap"><canvas id="board" aria-label="Pole" data-i18n-aria="board.aria"></canvas></div>
+    <p class="legend" data-i18n="legend">Czerwony = biegun N, niebieski = biegun S. Różne bieguny się przyciągają, jednakowe odpychają.</p>
+    <div class="hand-wrap" id="handBox">
+      <div class="hand-title" data-i18n="hand.title">Twoje magnesy w ręku (kliknij, by wybrać)</div>
+      <div class="hand-row">
+        <div id="hand" class="hand" role="listbox"></div>
+        <div class="hand-tools">
+          <button id="rotL" type="button" data-i18n-title="hand.rotL" title="Obróć w lewo" aria-label="Obróć w lewo" data-i18n-aria="hand.rotL">⟲</button>
+          <button id="rotR" type="button" data-i18n-title="hand.rotR" title="Obróć w prawo" aria-label="Obróć w prawo" data-i18n-aria="hand.rotR">⟳</button>
+        </div>
+      </div>
+    </div>
+    <div class="actions" id="actions">
+      <button id="resignBtn" class="danger" type="button" data-i18n="resign.btn">Poddaj się</button>
+    </div>
+    <div id="overBox" class="card" hidden>
+      <button id="fireworksBtn" type="button" hidden data-i18n="fireworks.btn">🎆 Fajerwerki</button>
+      <button id="rematchBtn" class="primary" type="button" data-i18n="rematch">Zagraj ponownie</button>
+    </div>
+  </section>
+
+  <section id="closedScreen" hidden>
+    <div class="card">
+      <h2 data-i18n="closed.title">Gra została zamknięta</h2>
+      <p data-i18n="closed.text">Serwer i tunel zostały wyłączone. Możesz zamknąć tę kartę przeglądarki.</p>
+      <p id="closedAuto" class="share-note" hidden></p>
+    </div>
+  </section>
+</main>
+
+<div id="chat" class="chat" hidden>
+  <button id="chatToggle" type="button" aria-expanded="false" aria-controls="chatPanel" title="Czat" data-i18n-title="chat.title">
+    <span aria-hidden="true">💬</span><span id="chatBadge" class="badge" hidden>0</span>
+  </button>
+  <div id="chatPanel" class="chat-panel" role="dialog" aria-label="Czat" data-i18n-aria="chat.title" hidden>
+    <div class="chat-head"><strong data-i18n="chat.title">Czat</strong><button id="chatClose" type="button" aria-label="Zamknij" data-i18n-aria="chat.close">✕</button></div>
+    <div id="chatLog" class="chat-log" role="log" aria-live="polite"></div>
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" maxlength="200" autocomplete="off" placeholder="Napisz do przeciwnika…" data-i18n-placeholder="chat.placeholder" aria-label="Wiadomość" data-i18n-aria="chat.message">
+      <button class="primary" type="submit" data-i18n="chat.send">Wyślij</button>
+    </form>
+  </div>
+</div>
+
+<div id="tutorial" class="tut" hidden role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+  <div class="tut-card">
+    <div class="tut-head"><span id="tutStep" class="tut-step"></span><button id="tutClose" type="button" class="tut-x" aria-label="Zamknij samouczek" data-i18n-aria="tut.close">✕</button></div>
+    <h2 id="tutTitle"></h2>
+    <canvas id="tutCanvas" width="320" height="220" aria-hidden="true"></canvas>
+    <div id="tutText" class="tut-text"></div>
+    <div class="tut-foot">
+      <div id="tutDots" class="tut-dots"></div>
+      <div class="tut-nav"><button id="tutPrev" type="button" data-i18n="tut.prev">Wstecz</button><button id="tutNext" class="primary" type="button" data-i18n="tut.next">Dalej</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="sound-btns">
+  <button id="musicBtn" type="button" aria-pressed="false" title="Wycisz muzykę">🎵</button>
+  <button id="mute" type="button" aria-pressed="false" title="Wycisz dźwięki">🔊</button>
+</div>
+<script src="vendor/qrcode.js"></script>
+<script src="i18n.js"></script>
+<script src="engine.js"></script>
+<script src="music.js"></script>
+<script src="field.js"></script>
+<script src="fireworks.js"></script>
+<script src="board.js"></script>
+<script src="tutorial.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
